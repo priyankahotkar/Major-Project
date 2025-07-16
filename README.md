@@ -9,10 +9,6 @@ MentorConnect is a free, AI-driven online mentoring platform designed to connect
 - [Technical Design](#technical-design)
 - [Impact](#impact)
 - [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [References](#references)
-- [Team](#team)
 
 ## Project Overview
 **Project Name**: MentorConnect  
@@ -70,6 +66,15 @@ MentorConnect addresses these issues by offering a free platform with automated 
 
 ## Installation
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/MentorSync/MentorConnect.git
+```bash
+git clone https://github.com/MentorSync/MentorConnect.git
+```
+2. Install dependencies:
+```bash
+npm install
+```
+3. Start the development server:
+```bash
+npm start
+```
 
