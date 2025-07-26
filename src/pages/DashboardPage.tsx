@@ -110,7 +110,7 @@ export function DashboardPage() {
   }, []);
 
   const handleRoleChange = async (newRole: "mentor" | "mentee") => {
-    if (!newRole || newRole === role) return; // Prevent unnecessary updates
+    if (!newRole || newRole === role || !user) return; // Prevent unnecessary updates and null user
     try {
       const userRef = doc(db, "users", user.uid);
       await setDoc(userRef, {
@@ -237,7 +237,7 @@ export function DashboardPage() {
               <div className="flex items-center space-x-4">
                 <Avatar>
                   <AvatarImage src={mentor.photoURL} alt={mentor.name} />
-                  <AvatarFallback>{mentor.name[0]}</AvatarFallback>
+                  <AvatarFallback>{mentor.name ? mentor.name[0] : "U"}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-lg">{mentor.name}</h3>
