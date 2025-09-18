@@ -66,7 +66,7 @@ export const LandingPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Compass className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">MentorConnect</span>
+            <span className="text-2xl font-bold text-foreground">BeaconBond</span>
           </div>
           <div className="hidden md:flex space-x-4">
             <Button variant="ghost" onClick={() => navigate('/about')}>About</Button>
@@ -124,8 +124,8 @@ export const LandingPage: React.FC = () => {
             <div key={mentor.id} className="p-4 bg-white rounded-lg shadow-md">
               <div className="flex items-center space-x-4">
                 <Avatar>
-                  <AvatarImage src={mentor.photoURL} alt={mentor.name} />
-                  <AvatarFallback>{mentor.name[0]}</AvatarFallback>
+                  <AvatarImage src={mentor.photoURL} alt={mentor.name || ""} />
+                  <AvatarFallback>{mentor.name ? mentor.name[0] : "M"}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-lg">{mentor.name}</h3>

@@ -133,7 +133,7 @@ export function DashboardPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link to="/dashboard" className="text-xl font-bold text-primary">
-                MentorConnect
+                BeaconBond
               </Link>
             </div>
             <div className="flex items-center space-x-4">
