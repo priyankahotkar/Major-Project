@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Compass, Users, Calendar, MessageSquare } from 'lucide-react';
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/firebase";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
@@ -23,7 +23,8 @@ export const LandingPage: React.FC = () => {
     const fetchTopMentors = async () => {
       try {
         const mentorsRef = collection(db, "users");
-        const snapshot = await getDocs(mentorsRef);
+        const q = query(mentorsRef, where("role", "==", "mentor"));
+        const snapshot = await getDocs(q);
 
         const fetchedMentors = snapshot.docs.map((doc) => {
           const data = doc.data();
