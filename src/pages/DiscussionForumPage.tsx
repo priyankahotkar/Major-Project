@@ -33,6 +33,8 @@ export function DiscussionForumPage() {
   const [messages, setMessages] = useState<ForumMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newTopic, setNewTopic] = useState("");
+  const [toxicityWarning, setToxicityWarning] = useState<string | null>(null);
+
 
   // Fetch topics from Firestore
   useEffect(() => {
@@ -68,24 +70,33 @@ export function DiscussionForumPage() {
   }, [selectedTopic]);
 
   // Handle sending a new message
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !user || !selectedTopic) return;
+ const handleSendMessage = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!newMessage.trim() || !user || !selectedTopic) return;
 
-    const messagesRef = collection(db, "forumMessages", selectedTopic.id, "messages");
+  // 🔎 Analyze message before sending
+  const toxicityScore = await analyzeToxicity(newMessage);
+  if (toxicityScore !== null && toxicityScore > 0.5) {
+    setToxicityWarning("⚠️ Your message seems toxic. Please rephrase it.");
+    return;
+  }
 
-    try {
-      await addDoc(messagesRef, {
-        text: newMessage,
-        senderId: user.uid,
-        senderName: user.displayName || "Anonymous",
-        timestamp: serverTimestamp(),
-      });
-      setNewMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
-  };
+  setToxicityWarning(null); // clear old warning if safe
+
+  const messagesRef = collection(db, "forumMessages", selectedTopic.id, "messages");
+
+  try {
+    await addDoc(messagesRef, {
+      text: newMessage,
+      senderId: user.uid,
+      senderName: user.displayName || "Anonymous",
+      timestamp: serverTimestamp(),
+    });
+    setNewMessage("");
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+};
 
   // Handle creating a new topic
   const handleCreateTopic = async () => {
@@ -101,6 +112,32 @@ export function DiscussionForumPage() {
       console.error("Error creating topic:", error);
     }
   };
+
+  const analyzeToxicity = async (text: string): Promise<number | null> => {
+  try {
+    const API_KEY = "AIzaSyCbVyOfLuSULS74NmExG0EXsNh7e9oKb4s"; // Replace with your Perspective API key
+    const url = `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${API_KEY}`;
+
+    const body = {
+      comment: { text },
+      languages: ["en"],
+      requestedAttributes: { TOXICITY: {} },
+    };
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    return data.attributeScores?.TOXICITY?.summaryScore?.value || null;
+  } catch (error) {
+    console.error("Error analyzing toxicity:", error);
+    return null;
+  }
+};
+
 
   return (
     <div className="h-screen flex flex-col">
@@ -169,20 +206,30 @@ export function DiscussionForumPage() {
         )}
       </div>
 
+
+
+
       {/* Message Input */}
       {selectedTopic && (
-        <form onSubmit={handleSendMessage} className="p-4 bg-white border-t flex">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 p-2 border rounded-md focus:outline-none"
-          />
-          <Button type="submit" disabled={!newMessage.trim()} className="ml-2">
-            Send
-          </Button>
-        </form>
+        <form onSubmit={handleSendMessage} className="p-4 bg-white border-t flex flex-col">
+  <div className="flex">
+    <input
+      type="text"
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      placeholder="Type a message..."
+      className="flex-1 p-2 border rounded-md focus:outline-none"
+    />
+    <Button type="submit" disabled={!newMessage.trim()} className="ml-2">
+      Send
+    </Button>
+  </div>
+
+  {toxicityWarning && (
+    <p className="text-red-500 text-sm mt-2">{toxicityWarning}</p>
+  )}
+</form>
+
       )}
     </div>
   );
