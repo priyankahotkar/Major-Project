@@ -15,6 +15,7 @@ import { MentorDashboardPage } from "./pages/MentorDashboard"; // Import MentorD
 import { DiscussionForumPage } from "./pages/DiscussionForumPage"; // Import the new page
 import { FAQPage } from "./pages/FAQPage"; // Import the FAQ page
 import { AboutPage } from "./pages/AboutPage";
+import { RoadmapPage } from "./pages/RoadmapPage";
 
 // ✅ Private route protection (only for authenticated users)
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,6 +72,7 @@ const App: React.FC = () => {
           <Route path="/discussion-forum" element={<PrivateRoute><DiscussionForumPage /></PrivateRoute>} />
           <Route path="/faq" element={<PrivateRoute><FAQPage /></PrivateRoute>} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/roadmap" element={<PrivateRoute><RoadmapPage /></PrivateRoute>} />
           </Routes>
         </NotificationProvider>
       </AuthProvider>

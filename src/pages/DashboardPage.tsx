@@ -165,6 +165,12 @@ export function DashboardPage() {
                 FAQs
               </Button>
             </Link>
+            <Link to="/roadmap">
+              <Button className="w-full justify-start" variant="outline">
+                <Calendar className="mr-2 h-5 w-5" />
+                Generate Roadmap
+              </Button>
+            </Link>
           </div>
 
           {/* Upcoming Sessions */}
