@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Video, Phone } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useNotification } from "@/contexts/NotificationContext";
 import { auth, db, storage } from "@/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
@@ -10,9 +12,9 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
-  doc,
   getDocs,
   where,
+  limit,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -30,6 +32,7 @@ interface User {
   name: string;
   email: string;
   photoURL: string;
+  lastMessageTimestamp?: any;
 }
 
 export function ChatPage() {
@@ -38,20 +41,62 @@ export function ChatPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [user] = useAuthState(auth);
+  const navigate = useNavigate();
+  const { showNotification } = useNotification();
 
-  // Fetch user list
+  // Fetch user list and their last messages
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchUsersWithLastMessages = async () => {
       if (!user) return;
+      
+      // First, fetch all users
       const usersRef = collection(db, "users");
       const snapshot = await getDocs(usersRef);
       const usersList = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() } as User))
         .filter((u) => u.id !== user?.uid);
-      setUsers(usersList);
+
+      // For each user, get their last message timestamp
+      const usersWithTimestamp = await Promise.all(
+        usersList.map(async (u) => {
+          const chatId = user.uid < u.id
+            ? `${user.uid}_${u.id}`
+            : `${u.id}_${user.uid}`;
+
+          const messagesRef = collection(db, "chats", chatId, "messages");
+          const q = query(messagesRef, orderBy("timestamp", "desc"), limit(1));
+          const messageSnap = await getDocs(q);
+          
+          const lastMessage = messageSnap.docs[0]?.data();
+          return {
+            ...u,
+            lastMessageTimestamp: lastMessage?.timestamp || null
+          };
+        })
+      );
+
+      // Sort users by last message timestamp
+      const sortedUsers = usersWithTimestamp.sort((a, b) => {
+        if (!a.lastMessageTimestamp && !b.lastMessageTimestamp) return 0;
+        if (!a.lastMessageTimestamp) return 1;
+        if (!b.lastMessageTimestamp) return -1;
+        return b.lastMessageTimestamp.seconds - a.lastMessageTimestamp.seconds;
+      });
+
+      setUsers(sortedUsers);
     };
 
-    fetchUsers();
+    fetchUsersWithLastMessages();
+
+    // Set up real-time listener for new messages to update user order
+    const unsubscribeChats = onSnapshot(
+      collection(db, "chats"),
+      () => {
+        fetchUsersWithLastMessages();
+      }
+    );
+
+    return () => unsubscribeChats();
   }, [user]);
 
   // Fetch previous messages and listen for new messages in real-time
@@ -84,6 +129,30 @@ export function ChatPage() {
         id: doc.id,
         ...doc.data(),
       })) as Message[];
+
+      // Check for new messages
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const message = change.doc.data() as Message;
+          if (message.senderId !== user?.uid && selectedUser) {
+            const messagePreview = message.text 
+              ? (message.text.length > 50 ? message.text.substring(0, 47) + '...' : message.text)
+              : message.fileName 
+                ? `Sent a file: ${message.fileName}`
+                : 'Sent a message';
+                
+            showNotification({
+              title: `New message from ${selectedUser.name}`,
+              message: messagePreview,
+              onClick: () => {
+                // Ensure the chat window is focused
+                window.focus();
+              }
+            });
+          }
+        }
+      });
+      
       setMessages(fetchedMessages);
     });
 
@@ -146,7 +215,7 @@ export function ChatPage() {
     <div className="h-screen flex">
       {/* Sidebar: User List */}
       <div className="w-1/4 bg-gray-200 p-4 border-r">
-        <h2 className="text-lg font-bold mb-3">Available Users</h2>
+        <h2 className="text-lg font-bold mb-3">Recent Chats</h2>
         <ul>
           {users.map((u) => (
             <li
@@ -157,7 +226,14 @@ export function ChatPage() {
               onClick={() => setSelectedUser(u)}
             >
               <img src={u.photoURL} alt={u.name} className="w-8 h-8 rounded-full" />
-              <span>{u.name}</span>
+              <div className="flex flex-col">
+                <span>{u.name}</span>
+                {u.lastMessageTimestamp && (
+                  <span className="text-xs text-gray-500">
+                    {new Date(u.lastMessageTimestamp.toDate()).toLocaleString()}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -166,8 +242,44 @@ export function ChatPage() {
       {/* Chat Section */}
       <div className="w-3/4 flex flex-col bg-gray-100">
         {/* Chat Header */}
-        <div className="p-4 bg-primary text-white text-center text-lg font-bold">
-          {selectedUser ? `Chat with ${selectedUser.name}` : "Select a user to chat"}
+        <div className="p-4 bg-primary text-white flex justify-between items-center">
+          <div className="text-lg font-bold">
+            {selectedUser ? `Chat with ${selectedUser.name}` : "Select a user to chat"}
+          </div>
+          {selectedUser && (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  const chatId = user?.uid && selectedUser.id ? 
+                    (user.uid < selectedUser.id ? 
+                      `${user.uid}_${selectedUser.id}` : 
+                      `${selectedUser.id}_${user.uid}`) : 
+                    '';
+                  navigate(`/video-call/${chatId}`);
+                }}
+                className="bg-blue-500 hover:bg-blue-600"
+                size="sm"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Video Call
+              </Button>
+              <Button
+                onClick={() => {
+                  const chatId = user?.uid && selectedUser.id ? 
+                    (user.uid < selectedUser.id ? 
+                      `${user.uid}_${selectedUser.id}` : 
+                      `${selectedUser.id}_${user.uid}`) : 
+                    '';
+                  navigate(`/voice-call/${chatId}`);
+                }}
+                className="bg-green-500 hover:bg-green-600"
+                size="sm"
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                Voice Call
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Chat Messages */}

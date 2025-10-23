@@ -188,12 +188,20 @@ export function DashboardPage() {
                           <p className="text-sm text-gray-500">{session.date}</p>
                         </div>
                       </div>
-                      <Link to={`/video-call/${session.id}`}>
-                        <Button className="bg-blue-500 text-white px-4 py-2">
-                          <Video className="mr-2 h-4 w-4" />
-                          Join Video Call
-                        </Button>
-                      </Link>
+                      <div className="flex gap-2">
+                        <Link to={`/video-call/${session.id}`}>
+                          <Button className="bg-blue-500 text-white px-4 py-2">
+                            <Video className="mr-2 h-4 w-4" />
+                            Video Call
+                          </Button>
+                        </Link>
+                        <Link to={`/voice-call/${session.id}`}>
+                          <Button className="bg-green-500 text-white px-4 py-2">
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Voice Call
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))
