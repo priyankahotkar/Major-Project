@@ -87,7 +87,7 @@ export class GeminiService {
 
   private async fetchLeetCodeData(username: string): Promise<LeetCodeUserData> {
     try {
-      const response = await fetch(`https://leetcode-api-pied.vercel.app/user/${username}`);
+      const response = await fetch(`/api/leetcode/user/${username}`);
       return await response.json();
     } catch (error) {
       console.error('Error fetching LeetCode data:', error);

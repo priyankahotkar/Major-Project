@@ -27,5 +27,16 @@ export default defineConfig(({ mode }) => {
         VITE_FIREBASE_MEASUREMENT_ID: env.VITE_FIREBASE_MEASUREMENT_ID,
       },
     },
+
+    server: {
+      proxy: {
+        '/api/leetcode': {
+          target: 'https://leetcode-api-pied.vercel.app',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path) => path.replace(/^\/api\/leetcode/, ''),
+        },
+      },
+    },
   };
 });
