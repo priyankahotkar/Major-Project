@@ -7,12 +7,15 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { BookingPage } from "./pages/BookingPage";
 import { ChatPage } from "./pages/ChatPage";
 import { VideoCallPage } from "./pages/VideoCallPage";
+import { VoiceCallPage } from "./pages/VoiceCallPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import { v4 as uuidv4 } from "uuid";
 import { MentorDashboardPage } from "./pages/MentorDashboard"; // Import MentorDashboard
 import { DiscussionForumPage } from "./pages/DiscussionForumPage"; // Import the new page
 import { FAQPage } from "./pages/FAQPage"; // Import the FAQ page
 import { AboutPage } from "./pages/AboutPage";
+import { RoadmapPage } from "./pages/RoadmapPage";
 
 // ✅ Private route protection (only for authenticated users)
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -54,7 +57,8 @@ const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
+        <NotificationProvider>
+          <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/FillDetails/:role" element={<FillDetails />} />
@@ -64,10 +68,13 @@ const App: React.FC = () => {
           <Route path="/booking" element={<PrivateRoute><BookingPage /></PrivateRoute>} />
           <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
           <Route path="/video-call/:sessionId" element={<PrivateRoute><VideoCallPage /></PrivateRoute>} />
+          <Route path="/voice-call/:sessionId" element={<PrivateRoute><VoiceCallPage /></PrivateRoute>} />
           <Route path="/discussion-forum" element={<PrivateRoute><DiscussionForumPage /></PrivateRoute>} />
           <Route path="/faq" element={<PrivateRoute><FAQPage /></PrivateRoute>} />
           <Route path="/about" element={<AboutPage />} />
-        </Routes>
+          <Route path="/roadmap" element={<PrivateRoute><RoadmapPage /></PrivateRoute>} />
+          </Routes>
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, MessageSquare, Video, LogOut } from "lucide-react";
-import { collection, query, where, getDocs, orderBy, doc, setDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { db } from "@/firebase";
 
 interface UpcomingSession {
@@ -28,7 +28,7 @@ interface Mentor {
 }
 
 export function DashboardPage() {
-  const { user, logout, role, updateRole } = useAuth();
+  const { user, logout } = useAuth();
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
 
@@ -72,7 +72,8 @@ export function DashboardPage() {
     const fetchMentors = async () => {
       try {
         const mentorsRef = collection(db, "users");
-        const snapshot = await getDocs(mentorsRef);
+        const q = query(mentorsRef, where("role", "==", "mentor"));
+        const snapshot = await getDocs(q);
 
         const fetchedMentors = snapshot.docs.map((doc) => {
           const data = doc.data();
@@ -109,22 +110,6 @@ export function DashboardPage() {
     fetchMentors();
   }, []);
 
-  const handleRoleChange = async (newRole: "mentor" | "mentee") => {
-    if (!newRole || newRole === role || !user) return; // Prevent unnecessary updates and null user
-    try {
-      const userRef = doc(db, "users", user.uid);
-      await setDoc(userRef, {
-        role: newRole,
-        detailsCompleted: false, // Reset details completion status
-        updatedAt: new Date(), // Add a timestamp for updates
-      }, { merge: true });
-      await updateRole(newRole); // Call updateRole from AuthContext
-      window.location.href = `/dashboard/${newRole}`; // Redirect to the correct dashboard
-    } catch (error) {
-      console.error("Error updating role:", error);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -133,7 +118,7 @@ export function DashboardPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link to="/dashboard" className="text-xl font-bold text-primary">
-                MentorConnect
+                BeaconBond
               </Link>
             </div>
             <div className="flex items-center space-x-4">
@@ -141,15 +126,7 @@ export function DashboardPage() {
                 <AvatarImage src={user?.photoURL || ""} alt={user?.displayName || "User"} />
                 <AvatarFallback>{user?.displayName?.[0] || "U"}</AvatarFallback>
               </Avatar>
-              <select
-                className="border p-2 rounded"
-                value={role || ""}
-                onChange={(e) => handleRoleChange(e.target.value as "mentor" | "mentee")}
-              >
-                <option value="">Select Role</option>
-                <option value="mentor">Mentor</option>
-                <option value="mentee">Mentee</option>
-              </select>
+              <div className="p-2 font-semibold">Mentee</div>
               <Button variant="ghost" onClick={logout}>
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -188,6 +165,12 @@ export function DashboardPage() {
                 FAQs
               </Button>
             </Link>
+            <Link to="/roadmap">
+              <Button className="w-full justify-start" variant="outline">
+                <Calendar className="mr-2 h-5 w-5" />
+                Generate Roadmap
+              </Button>
+            </Link>
           </div>
 
           {/* Upcoming Sessions */}
@@ -211,12 +194,20 @@ export function DashboardPage() {
                           <p className="text-sm text-gray-500">{session.date}</p>
                         </div>
                       </div>
-                      <Link to={`/video-call/${session.id}`}>
-                        <Button className="bg-blue-500 text-white px-4 py-2">
-                          <Video className="mr-2 h-4 w-4" />
-                          Join Video Call
-                        </Button>
-                      </Link>
+                      <div className="flex gap-2">
+                        <Link to={`/video-call/${session.id}`}>
+                          <Button className="bg-blue-500 text-white px-4 py-2">
+                            <Video className="mr-2 h-4 w-4" />
+                            Video Call
+                          </Button>
+                        </Link>
+                        <Link to={`/voice-call/${session.id}`}>
+                          <Button className="bg-green-500 text-white px-4 py-2">
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Voice Call
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))

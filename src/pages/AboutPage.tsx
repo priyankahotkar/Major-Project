@@ -7,12 +7,12 @@ export function AboutPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold mb-6 text-center">About MentorConnect</h1>
+        <h1 className="text-3xl font-bold mb-6 text-center">About BeaconBond</h1>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">🧭 Our Mission</h2>
           <p className="text-gray-700">
-            At MentorConnect, our mission is simple yet powerful: To connect learners with the right mentors who can guide, inspire, and empower them at every step of their journey.
+            At BeaconBond, our mission is simple yet powerful: To connect learners with the right mentors who can guide, inspire, and empower them at every step of their journey.
           </p>
           <p className="text-gray-700 mt-2">
             We aim to create a space where mentorship is not just occasional advice but a long-term, trusted relationship that helps unlock true potential.
@@ -22,10 +22,10 @@ export function AboutPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">🌱 Our Story</h2>
           <p className="text-gray-700">
-            MentorConnect was born from a shared realization among four students: meaningful mentorship is hard to find, yet crucial for growth. Whether you're a beginner navigating career paths or a student seeking domain-specific guidance, having someone who's “been there, done that” can make all the difference.
+            BeaconBond was born from a shared realization among four students: meaningful mentorship is hard to find, yet crucial for growth. Whether you're a beginner navigating career paths or a student seeking domain-specific guidance, having someone who's “been there, done that” can make all the difference.
           </p>
           <p className="text-gray-700 mt-2">
-            As students ourselves, we experienced this gap firsthand. That’s why we built MentorConnect — a dynamic, student-centric platform designed to break barriers, connect generations, and foster genuine learning through personalized mentorship.
+            As students ourselves, we experienced this gap firsthand. That’s why we built BeaconBond — a dynamic, student-centric platform designed to break barriers, connect generations, and foster genuine learning through personalized mentorship.
           </p>
         </section>
 
@@ -96,7 +96,7 @@ export function AboutPage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">💬 Join the Movement</h2>
           <p className="text-gray-700">
-            Whether you're here to learn or to lead, there's a place for you at MentorConnect.
+            Whether you're here to learn or to lead, there's a place for you at BeaconBond.
           </p>
           <p className="text-gray-700 mt-2">
             Ready to grow? Ready to guide? We’re just getting started.

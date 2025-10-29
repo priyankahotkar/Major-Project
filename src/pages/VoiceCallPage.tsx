@@ -4,39 +4,31 @@ import { v4 as uuidv4 } from "uuid";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNotification } from "@/contexts/NotificationContext";
 import JitsiMeet from "../components/JitsiMeet";
 
-export function VideoCallPage() {
+export function VoiceCallPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { user, role } = useAuth();
-  const { showNotification } = useNotification();
 
   useEffect(() => {
     const handleRoomLogic = async () => {
       if (!sessionId) {
         if (role === "mentor") {
           // Generate a new room for mentors
-          const newRoomId = `mentor-room-${uuidv4()}`;
+          const newRoomId = `voice-room-${uuidv4()}`;
           try {
-            const roomRef = doc(db, "videoRooms", newRoomId);
+            const roomRef = doc(db, "voiceRooms", newRoomId);
             await setDoc(roomRef, {
               mentorId: user?.uid,
               mentorName: user?.displayName || "Unknown Mentor",
               createdAt: serverTimestamp(),
+              type: "voice"
             });
-            showNotification({
-              title: 'Video Call',
-              message: 'Video call room created successfully'
-            });
-            navigate(`/video-call/${newRoomId}`);
+            console.log("New voice room created:", newRoomId);
+            navigate(`/voice-call/${newRoomId}`);
           } catch (error) {
-            console.error("Error creating room:", error);
-            showNotification({
-              title: 'Error',
-              message: 'Failed to create video call room'
-            });
+            console.error("Error creating voice room:", error);
           }
         } else {
           // Redirect mentees to their dashboard if no room ID is provided
@@ -45,21 +37,15 @@ export function VideoCallPage() {
         }
       } else if (role === "mentee") {
         // Ensure mentees can only join existing rooms
-        showNotification({
-          title: 'Video Call',
-          message: 'Joining video call room...'
-        });
+        console.log("Mentee joining voice room:", sessionId);
       }
     };
 
     handleRoomLogic();
 
     return () => {
-      console.log("Cleaning up video call resources...");
-      showNotification({
-        title: 'Video Call',
-        message: 'Video call ended'
-      });
+      console.log("Cleaning up voice call resources...");
+      // Add any necessary cleanup logic here
     };
   }, [sessionId, role, user, navigate]);
 
@@ -73,7 +59,7 @@ export function VideoCallPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <JitsiMeet roomName={sessionId} />
+      <JitsiMeet roomName={sessionId} isVoiceOnly={true} />
     </div>
   );
 }

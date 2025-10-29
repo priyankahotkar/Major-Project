@@ -175,7 +175,7 @@ export function MentorDashboardPage() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Link to="/mentor-dashboard" className="text-xl font-bold text-primary">
-              MentorConnect - Mentor
+              BeaconBond - Mentor
             </Link>
             <div className="flex items-center space-x-4">
               <Avatar>
