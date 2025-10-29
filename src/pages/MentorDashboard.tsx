@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { MessageSquare, Video, LogOut, PlusCircle, Sun, Moon } from 'lucide-react';
+import { MessageSquare, Video, LogOut, PlusCircle, Sun, Moon, FileText } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { doc, setDoc, collection, query, where, orderBy, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -206,6 +206,12 @@ export function MentorDashboardPage() {
               <Button className="w-full justify-start" variant="outline">
                 <MessageSquare className="mr-2 h-5 w-5" />
                 Discussion Forum
+              </Button>
+            </Link>
+            <Link to="/notes">
+              <Button className="w-full justify-start" variant="outline">
+                <FileText className="mr-2 h-5 w-5" />
+                Notes
               </Button>
             </Link>
             <Button onClick={generateJitsiRoom} className="w-full justify-start bg-blue-500 text-white">

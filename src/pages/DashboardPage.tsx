@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, MessageSquare, Video, LogOut } from "lucide-react";
+import { Calendar, MessageSquare, Video, LogOut, FileText } from "lucide-react";
 import { collection, query, where, getDocs, orderBy, doc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 
@@ -110,7 +110,7 @@ export function DashboardPage() {
   }, []);
 
   const handleRoleChange = async (newRole: "mentor" | "mentee") => {
-    if (!newRole || newRole === role) return; // Prevent unnecessary updates
+    if (!newRole || newRole === role || !user) return; // Prevent unnecessary updates or null user
     try {
       const userRef = doc(db, "users", user.uid);
       await setDoc(userRef, {
@@ -188,6 +188,12 @@ export function DashboardPage() {
                 FAQs
               </Button>
             </Link>
+            <Link to="/notes">
+              <Button className="w-full justify-start" variant="outline">
+                <FileText className="mr-2 h-5 w-5" />
+                Notes
+              </Button>
+            </Link>
           </div>
 
           {/* Upcoming Sessions */}
@@ -237,7 +243,7 @@ export function DashboardPage() {
               <div className="flex items-center space-x-4">
                 <Avatar>
                   <AvatarImage src={mentor.photoURL} alt={mentor.name} />
-                  <AvatarFallback>{mentor.name[0]}</AvatarFallback>
+                  {/* <AvatarFallback>{mentor.name[0]}</AvatarFallback> */}
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-lg">{mentor.name}</h3>

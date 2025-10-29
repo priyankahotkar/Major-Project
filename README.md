@@ -27,6 +27,12 @@ Many existing mentoring platforms suffer from:
 MentorConnect addresses these issues by offering a free platform with automated scheduling, built-in video calls, real-time chat, and secure authentication, ensuring a seamless mentoring experience.
 
 ## Features
+### Notes Integration
+- **Custom Notes**: Create, edit, and manage personal notes with tags and privacy settings
+- **Notion Integration**: Connect your Notion workspace to view and access pages and databases
+- **Real-time Sync**: All notes are synchronized in real-time using Firebase Firestore
+- **Secure Storage**: User data is protected with Firebase authentication and proper access controls
+
 ### Mentee-Side Features
 - **Dynamic Scheduling**: Book mentorship sessions using Google Calendar integration.
 - **Video Conferencing**: Attend secure, built-in video sessions powered by Jitsi Meet.
@@ -73,8 +79,21 @@ git clone https://github.com/MentorSync/MentorConnect.git
 ```bash
 npm install
 ```
-3. Start the development server:
+3. Set up environment variables:
+   - Copy `env.example` to `.env` for frontend configuration
+   - Copy `server/env.example` to `server/.env` for backend configuration
+   - Configure Firebase service account credentials
+   - Set up Notion integration credentials (optional)
+4. Start the development server:
 ```bash
-npm start
+# Run both frontend and backend
+npm run dev:full
+
+# Or run individually
+npm run dev      # Frontend only
+npm run server   # Backend only
 ```
+
+### Notes Integration Setup
+For detailed setup instructions for the Notes Integration feature, see [NOTES_INTEGRATION_README.md](NOTES_INTEGRATION_README.md).
 
