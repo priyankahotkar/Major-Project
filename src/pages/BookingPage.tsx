@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/firebase";
-import { collection, getDocs, query, where, orderBy, doc, addDoc, serverTimestamp, getDoc, updateDoc, Timestamp, onSnapshot, limit, arrayUnion } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, doc, addDoc, serverTimestamp, getDoc, updateDoc, Timestamp, onSnapshot, arrayUnion } from "firebase/firestore";
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Search, Star, TrendingUp, Video, CheckCircle, XCircle } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardTitle, CardContent } from '@/components/ui/card';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 
 interface Mentor {
   id: string;
@@ -37,9 +40,6 @@ interface Meeting {
   status?: string; // Add status field to Meeting interface
 }
 
-const timeSlots = [
-  '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'
-];
 
 const RateMentor: React.FC<{ mentorId: string; mentorName: string }> = ({ mentorId, mentorName }) => {
   const [rating, setRating] = useState<number | null>(null);
@@ -73,28 +73,32 @@ const RateMentor: React.FC<{ mentorId: string; mentorName: string }> = ({ mentor
   };
 
   return (
-    <div className="mt-4">
-      <h3 className="text-lg font-semibold">Rate {mentorName}</h3>
-      <div className="flex space-x-2 mt-2">
+    <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+      <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+        <Star className="w-5 h-5 text-amber-500" />
+        Rate {mentorName}
+      </h3>
+      <div className="flex space-x-2 mb-3">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
-            className={`p-2 rounded-full ${
-              rating === star ? "bg-yellow-400" : "bg-gray-200"
+            className={`p-2 rounded-full transition-all transform hover:scale-110 ${
+              rating === star ? "bg-amber-400 text-white shadow-md" : "bg-gray-200 text-gray-600"
             }`}
             onClick={() => setRating(star)}
           >
-            {star}★
+            <Star className={`w-6 h-6 ${rating === star ? "fill-current" : ""}`} />
           </button>
         ))}
       </div>
-      <button
-        className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
+      <Button
+        size="sm"
         onClick={handleRatingSubmit}
         disabled={submitted}
+        className="w-full"
       >
-        {submitted ? "Submitted" : "Submit Rating"}
-      </button>
+        {submitted ? "✓ Submitted" : "Submit Rating"}
+      </Button>
     </div>
   );
 };
@@ -108,10 +112,10 @@ export function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>();
   const [loading, setLoading] = useState(false);
-  const [bookedSessions, setBookedSessions] = useState<Session[]>([]);
+  const [, setBookedSessions] = useState<Session[]>([]);
   const [ongoingMeetings, setOngoingMeetings] = useState<Meeting[]>([]);
   const [mentorTimeSlots, setMentorTimeSlots] = useState<string[]>([]); // Add state for mentor's time slots
-  const [attendedMeetings, setAttendedMeetings] = useState<Meeting[]>([]); // Add state for attended meetings
+  const [, setAttendedMeetings] = useState<Meeting[]>([]); // Add state for attended meetings
 
   // Fetch mentors from Firestore
   useEffect(() => {
@@ -454,164 +458,243 @@ export function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Book a Mentoring Session</h1>
+    <>
+      <Header />
+      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-6">
+        <div className="max-w-7xl mx-auto px-6">
+        {/* Header Section */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Book a Mentoring Session
+          </h1>
+          <p className="text-gray-600">Find and book your perfect mentor</p>
+        </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Search mentors by domain..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Ongoing Meetings */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">Ongoing Meetings</h2>
-          {ongoingMeetingsFiltered.length > 0 ? (
-            <ul className="space-y-4">
-              {ongoingMeetingsFiltered.map((meeting) => (
-                <li key={meeting.id} className="p-4 bg-white rounded-lg shadow-sm border">
-                  <p className="font-semibold">Mentor: {meeting.mentorName}</p>
-                  <p>Room ID: {meeting.roomId}</p>
-                  <p>Scheduled At: {meeting.createdAt.toString()}</p>
-                  <a
-                    href={`https://meet.jit.si/${meeting.roomId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                    onClick={() => handleJoinMeeting(meeting.id)}
-                  >
-                    Join Meeting
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500">No ongoing meetings</p>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">Attended Meetings</h2>
-          {attendedMeetingsFiltered.length > 0 ? (
-            <ul className="space-y-4">
-              {attendedMeetingsFiltered.map((meeting) => (
-                <li key={meeting.id} className="p-4 bg-white rounded-lg shadow-sm border">
-                  <p className="font-semibold">Mentor: {meeting.mentorName}</p>
-                  <p>Room ID: {meeting.roomId}</p>
-                  <p>Attended At: {meeting.createdAt.toString()}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500">No attended meetings</p>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">Missed Meetings</h2>
-          {missedMeetings.length > 0 ? (
-            <ul className="space-y-4">
-              {missedMeetings.map((meeting) => (
-                <li key={meeting.id} className="p-4 bg-white rounded-lg shadow-sm border">
-                  <p className="font-semibold">Mentor: {meeting.mentorName}</p>
-                  <p>Room ID: {meeting.roomId}</p>
-                  <p>Missed At: {meeting.createdAt.toString()}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500">No missed meetings</p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Mentor Selection */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Choose a Mentor</h2>
-            <div className="space-y-4">
-              {filteredMentors.map((mentor) => (
-                <div
-                  key={mentor.id}
-                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                    selectedMentor?.id === mentor.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 hover:border-primary/50'
-                  }`}
-                  onClick={() => setSelectedMentor(mentor)}
-                >
-                  <div className="flex items-center space-x-4">
-                    <Avatar>
-                      <AvatarImage src={mentor.photoURL} alt={mentor.name} />
-                      <AvatarFallback>{mentor.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold">{mentor.name}</h3>
-                      <p className="text-sm text-gray-500">{mentor.email}</p>
-                      <p className="text-sm text-gray-400">Domain: {mentor.domain}</p> {/* Display domain */}
-                      <p className="text-sm text-gray-400">Experience: {mentor.experience}</p>
-                      <p className="text-sm text-gray-400">Expertise: {mentor.expertise}</p>
-                    </div>
-                  </div>
-                  {selectedMentor?.id === mentor.id && (
-                    <RateMentor mentorId={mentor.id} mentorName={mentor.name} />
-                  )}
-                </div>
-              ))}
-            </div>
+        <Card className="mb-8 shadow-sm">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search mentors by domain..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
+        </Card>
+
+        {/* Meetings Overview - Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Ongoing Meetings */}
+          <Card className="border-2 border-blue-200">
+            <CardTitle className="flex items-center gap-2 text-blue-600">
+              <Video className="w-5 h-5" />
+              Ongoing Meetings
+            </CardTitle>
+            <CardContent>
+              {ongoingMeetingsFiltered.length > 0 ? (
+                <div className="space-y-3">
+                  {ongoingMeetingsFiltered.map((meeting) => (
+                    <div key={meeting.id} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="font-semibold text-gray-900 mb-1">Mentor: {meeting.mentorName}</p>
+                      <p className="text-sm text-gray-600 mb-2">Room: {meeting.roomId}</p>
+                      <a
+                        href={`https://meet.jit.si/${meeting.roomId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        onClick={() => handleJoinMeeting(meeting.id)}
+                      >
+                        <Video className="w-4 h-4" />
+                        Join Meeting
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No ongoing meetings</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Attended Meetings */}
+          <Card className="border-2 border-green-200">
+            <CardTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="w-5 h-5" />
+              Attended Meetings
+            </CardTitle>
+            <CardContent>
+              {attendedMeetingsFiltered.length > 0 ? (
+                <div className="space-y-3">
+                  {attendedMeetingsFiltered.map((meeting) => (
+                    <div key={meeting.id} className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <p className="font-semibold text-gray-900 mb-1">Mentor: {meeting.mentorName}</p>
+                      <p className="text-sm text-gray-600">Room: {meeting.roomId}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No attended meetings</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Missed Meetings */}
+          <Card className="border-2 border-red-200">
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="w-5 h-5" />
+              Missed Meetings
+            </CardTitle>
+            <CardContent>
+              {missedMeetings.length > 0 ? (
+                <div className="space-y-3">
+                  {missedMeetings.map((meeting) => (
+                    <div key={meeting.id} className="p-4 bg-red-50 rounded-lg border border-red-200">
+                      <p className="font-semibold text-gray-900 mb-1">Mentor: {meeting.mentorName}</p>
+                      <p className="text-sm text-gray-600">Room: {meeting.roomId}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No missed meetings</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Mentor Selection */}
+          <Card>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Choose a Mentor
+            </CardTitle>
+            <CardContent>
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                {filteredMentors.length > 0 ? (
+                  filteredMentors.map((mentor) => (
+                    <div
+                      key={mentor.id}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedMentor?.id === mentor.id
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                      }`}
+                      onClick={() => setSelectedMentor(mentor)}
+                    >
+                      <div className="flex items-start space-x-4">
+                        <Avatar className="w-16 h-16">
+                          <AvatarImage src={mentor.photoURL} alt={mentor.name} />
+                          <AvatarFallback className="text-lg">{mentor.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg mb-1">{mentor.name}</h3>
+                          <p className="text-sm text-gray-500 mb-2">{mentor.email}</p>
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-700 flex items-center gap-2">
+                              <span className="font-medium">Domain:</span> {mentor.domain}
+                            </p>
+                            <p className="text-sm text-gray-700 flex items-center gap-2">
+                              <span className="font-medium">Experience:</span> {mentor.experience}
+                            </p>
+                            <p className="text-sm text-gray-700 flex items-center gap-2">
+                              <span className="font-medium">Expertise:</span> {mentor.expertise}
+                            </p>
+                            {mentor.rating && mentor.rating > 0 && (
+                              <p className="text-sm flex items-center gap-1 text-amber-600">
+                                <Star className="w-4 h-4 fill-current" />
+                                <span className="font-medium">{mentor.rating.toFixed(1)}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {selectedMentor?.id === mentor.id && (
+                        <div className="mt-4 border-t pt-4">
+                          <RateMentor mentorId={mentor.id} mentorName={mentor.name} />
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No mentors found</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Calendar and Time Selection */}
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">Select Date</h2>
-              <DayPicker
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                className="border rounded-lg p-4"
-              />
-            </div>
+            <Card>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5" />
+                Select Date
+              </CardTitle>
+              <CardContent>
+                <style>{`
+                  .rdp-day_selected {
+                    background-color: #dbeafe !important;
+                    color: #1e3a8a !important;
+                    font-weight: 600 !important;
+                  }
+                  .rdp-day_selected:hover {
+                    background-color: #bfdbfe !important;
+                  }
+                `}</style>
+                <DayPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  className="border rounded-lg p-4 bg-gray-50"
+                />
+              </CardContent>
+            </Card>
 
             {selectedDate && (
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">Select Time</h2>
-                {mentorTimeSlots.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {mentorTimeSlots.map((time) => (
-                      <button
-                        key={time}
-                        className={`p-2 text-sm rounded-md border transition-colors ${
-                          selectedTime === time
-                            ? "border-primary bg-primary text-white"
-                            : "border-gray-200 hover:border-primary/50"
-                        }`}
-                        onClick={() => setSelectedTime(time)}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No available time slots for this mentor.</p>
-                )}
-              </div>
+              <Card>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Select Time
+                </CardTitle>
+                <CardContent>
+                  {mentorTimeSlots.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {mentorTimeSlots.map((time) => (
+                        <button
+                          key={time}
+                          className={`p-4 text-base font-medium rounded-lg border-2 transition-all ${
+                            selectedTime === time
+                              ? "border-blue-500 bg-blue-500 text-white shadow-md transform scale-105"
+                              : "border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                          }`}
+                          onClick={() => setSelectedTime(time)}
+                        >
+                          {time}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Clock className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">No available time slots for this mentor.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
 
-        <div className="mt-8 flex justify-end">
+        {/* Booking Button */}
+        <div className="mb-8 flex justify-center">
           <Button
             size="lg"
             disabled={!selectedDate || !selectedMentor || !selectedTime || loading}
             onClick={handleBooking}
+            className="px-12 py-6 text-lg shadow-lg hover:shadow-xl transition-all text-white"
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-5 w-5" />
             {loading ? "Booking..." : "Book Session"}
           </Button>
         </div>
@@ -621,13 +704,26 @@ export function BookingPage() {
 
         {/* Top Mentors Section */}
         <TopMentors />
-      </div>
-    </div>
+        </div>
+      </main>
+      <Footer />
+    </>
   );
 }
 
+interface RecommendedMentor {
+  id: string;
+  name: string;
+  photoURL: string;
+  domain: string;
+  experience: string;
+  expertise: string;
+  ratings: number[];
+  highRatingFrequency: number;
+}
+
 const RecommendedMentors: React.FC<{ domain: string }> = ({ domain }) => {
-  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [mentors, setMentors] = useState<RecommendedMentor[]>([]);
 
   useEffect(() => {
     const fetchTopMentors = async () => {
@@ -674,39 +770,59 @@ const RecommendedMentors: React.FC<{ domain: string }> = ({ domain }) => {
   }, [domain]);
 
   return (
-    <div className="mt-6">
-      <h2 className="text-xl font-bold mb-4">Top Mentors for {domain}</h2>
+    <div className="mb-8">
+      <div className="flex items-center gap-2 mb-6">
+        <TrendingUp className="w-6 h-6 text-blue-600" />
+        <h2 className="text-2xl font-bold text-gray-900">Top Mentors for {domain}</h2>
+      </div>
       {mentors.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {mentors.map((mentor) => (
-            <div key={mentor.id} className="p-4 bg-white rounded-lg shadow-md">
-              <div className="flex items-center space-x-4">
-                <Avatar>
-                  <AvatarImage src={mentor.photoURL} alt={mentor.name} />
-                  <AvatarFallback>{mentor.name[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{mentor.name}</h3>
-                  <p className="text-sm text-gray-500">{mentor.expertise}</p>
-                  <p className="text-sm text-gray-400">Experience: {mentor.experience} years</p>
-                  <p className="text-sm text-yellow-500">
-                    High Ratings: {mentor.highRatingFrequency}
-                  </p>
+            <Card key={mentor.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-4">
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={mentor.photoURL} alt={mentor.name} />
+                    <AvatarFallback className="text-lg">{mentor.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1">{mentor.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{mentor.expertise}</p>
+                    <p className="text-sm text-gray-500 mb-2">Experience: {mentor.experience}</p>
+                    <div className="flex items-center gap-2 text-amber-600">
+                      <Star className="w-4 h-4 fill-current" />
+                      <span className="text-sm font-medium">{mentor.highRatingFrequency} High Ratings</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <Button className="mt-4 w-full bg-blue-500 text-white">View Profile</Button>
-            </div>
+                <Button className="mt-4 w-full" variant="outline">View Profile</Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
-        <p className="text-gray-500">No top mentors found for this domain.</p>
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-gray-500">No top mentors found for this domain.</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
 };
 
+interface TopMentor {
+  id: string;
+  name: string;
+  photoURL: string;
+  domain: string;
+  experience: string;
+  expertise: string;
+  highestFrequencyRating: number;
+}
+
 const TopMentors: React.FC = () => {
-  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [mentors, setMentors] = useState<TopMentor[]>([]);
 
   useEffect(() => {
     const fetchTopMentors = async () => {
@@ -726,9 +842,9 @@ const TopMentors: React.FC = () => {
           }, {});
 
           // Find the rating with the highest frequency
-          const highestFrequencyRating = Object.keys(ratingFrequency).reduce((a, b) => {
+          const highestFrequencyRating = Number(Object.keys(ratingFrequency).reduce((a, b) => {
             return ratingFrequency[Number(a)] > ratingFrequency[Number(b)] ? a : b;
-          }, "1");
+          }, "1"));
 
           return {
             id: doc.id,
@@ -743,7 +859,7 @@ const TopMentors: React.FC = () => {
 
         // Sort mentors by the frequency of high ratings (descending)
         const sortedMentors = fetchedMentors.sort(
-          (a, b) => b.highestFrequencyRating - a.highestFrequencyRating
+          (a, b) => (b.highestFrequencyRating || 0) - (a.highestFrequencyRating || 0)
         );
 
         setMentors(sortedMentors.slice(0, 5)); // Limit to top 5 mentors
@@ -756,30 +872,40 @@ const TopMentors: React.FC = () => {
   }, []);
 
   return (
-    <div className="mt-6">
-      <h2 className="text-xl font-bold mb-4">Top Mentors</h2>
+    <div className="mb-8">
+      <div className="flex items-center gap-2 mb-6">
+        <Star className="w-6 h-6 text-amber-500" />
+        <h2 className="text-2xl font-bold text-gray-900">Top Rated Mentors</h2>
+      </div>
       {mentors.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {mentors.map((mentor) => (
-            <div key={mentor.id} className="p-4 bg-white rounded-lg shadow-md">
-              <div className="flex items-center space-x-4">
-                <Avatar>
+            <Card key={mentor.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-4 text-center">
+                <Avatar className="w-16 h-16 mx-auto mb-3">
                   <AvatarImage src={mentor.photoURL} alt={mentor.name} />
-                  <AvatarFallback>{mentor.name[0]}</AvatarFallback>
+                  <AvatarFallback className="text-lg">{mentor.name[0]}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{mentor.name}</h3>
-                  <p className="text-sm text-gray-500">{mentor.expertise}</p>
-                  <p className="text-sm text-yellow-500">
-                    Most Frequent Rating: {mentor.highestFrequencyRating}
-                  </p>
+                <h3 className="font-semibold text-base mb-1">{mentor.name}</h3>
+                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{mentor.expertise}</p>
+                <div className="flex items-center justify-center gap-1 text-amber-600">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${i < mentor.highestFrequencyRating ? 'fill-current' : 'text-gray-300'}`}
+                    />
+                  ))}
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
-        <p className="text-gray-500">No top mentors found.</p>
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-gray-500">No top mentors found.</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

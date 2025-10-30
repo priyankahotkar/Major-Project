@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { GeminiService } from '@/services/gemini';
 import ReactMarkdown from 'react-markdown';
 import { useNotification } from '@/contexts/NotificationContext';
+import { Card, CardTitle, CardContent } from '@/components/ui/card';
+import { Input, Textarea, Select } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Container } from '@/components/ui/layout';
+import { FadeIn } from '@/components/ui/animations';
+import { Trophy } from 'lucide-react';
+import { Layout } from '@/components/layout/Layout';
 
 interface RoadmapForm {
   githubUsername: string;
@@ -58,124 +65,105 @@ export function RoadmapPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Generate Your Learning Roadmap</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Form Section */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="githubUsername" className="block text-sm font-medium text-gray-700">
-                GitHub Username
-              </label>
-              <input
-                type="text"
-                id="githubUsername"
-                name="githubUsername"
-                value={formData.githubUsername}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="leetcodeUsername" className="block text-sm font-medium text-gray-700">
-                LeetCode Username
-              </label>
-              <input
-                type="text"
-                id="leetcodeUsername"
-                name="leetcodeUsername"
-                value={formData.leetcodeUsername}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="codeforcesUsername" className="block text-sm font-medium text-gray-700">
-                Codeforces Username
-              </label>
-              <input
-                type="text"
-                id="codeforcesUsername"
-                name="codeforcesUsername"
-                value={formData.codeforcesUsername}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="goal" className="block text-sm font-medium text-gray-700">
-                Your Learning Goal
-              </label>
-              <textarea
-                id="goal"
-                name="goal"
-                value={formData.goal}
-                onChange={handleInputChange}
-                rows={3}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
-                placeholder="e.g., Master full-stack development, Prepare for FAANG interviews..."
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
-                Target Duration
-              </label>
-              <select
-                id="duration"
-                name="duration"
-                value={formData.duration}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
-                required
-              >
-                <option value="">Select duration</option>
-                <option value="1 month">1 month</option>
-                <option value="3 months">3 months</option>
-                <option value="6 months">6 months</option>
-                <option value="1 year">1 year</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
-                isLoading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {isLoading ? 'Generating...' : 'Generate Roadmap'}
-            </button>
-          </form>
-        </div>
-
-        {/* Roadmap Display Section */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Your Personalized Roadmap</h2>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-          ) : roadmap ? (
-            <div className="prose max-w-none">
-              <ReactMarkdown>{roadmap}</ReactMarkdown>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center">
-              Fill out the form to generate your personalized learning roadmap
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+    <Layout>
+      <Container>
+        <FadeIn>
+          <div className="grid grid-cols-1 md:grid-cols-2 md:items-start gap-10">
+            <Card className="flex flex-col justify-start">
+              <CardTitle>Generate Your Learning Roadmap</CardTitle>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <Input
+                    label="GitHub Username"
+                    name="githubUsername"
+                    value={formData.githubUsername}
+                    onChange={handleInputChange}
+                    placeholder="e.g. priyanka-dev"
+                    required
+                  />
+                  <Input
+                    label="LeetCode Username"
+                    name="leetcodeUsername"
+                    value={formData.leetcodeUsername}
+                    onChange={handleInputChange}
+                    placeholder="e.g. codechamp123"
+                    required
+                  />
+                  <Input
+                    label="Codeforces Username"
+                    name="codeforcesUsername"
+                    value={formData.codeforcesUsername}
+                    onChange={handleInputChange}
+                    placeholder="e.g. coderforcepro"
+                    required
+                  />
+                  <Textarea
+                    label="Your Learning Goal"
+                    name="goal"
+                    value={formData.goal}
+                    onChange={handleInputChange}
+                    rows={3}
+                    placeholder="e.g., Master full-stack development, Prepare for FAANG interviews..."
+                    required
+                  />
+                  <Select
+                    label="Target Duration"
+                    name="duration"
+                    value={formData.duration}
+                    onChange={handleInputChange}
+                    options={[
+                      { value: '', label: 'Select duration' },
+                      { value: '1 month', label: '1 month' },
+                      { value: '3 months', label: '3 months' },
+                      { value: '6 months', label: '6 months' },
+                      { value: '1 year', label: '1 year' },
+                    ]}
+                    required
+                  />
+                  <Button type="submit" disabled={isLoading} className="w-full text-white">
+                    {isLoading ? 'Generating...' : 'Generate Roadmap'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+            <FadeIn delay={0.11}>
+              <Card className="flex flex-col justify-start">
+                <CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center rounded-full bg-gradient-to-tr from-yellow-400/80 to-orange-400/80 p-2 shadow-sm">
+                      <Trophy className="w-6 h-6 text-white" />
+                    </span>
+                    <span>Your Personalized Roadmap</span>
+                  </div>
+                  <span className="block text-sm text-gray-500 font-normal ml-10 mt-1">Tailored steps to reach your goal 🚀</span>
+                </CardTitle>
+                <CardContent className="max-h-[70vh] overflow-y-auto rounded-xl bg-gradient-to-br from-blue-50 via-white to-orange-50 transition-shadow shadow-xs pb-3 md:pb-4 mt-2">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center h-64">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                  ) : roadmap ? (
+                    <FadeIn delay={0.2}>
+                      <div className="prose max-w-none mx-auto text-gray-800">
+                        <div className="flex items-center mb-4">
+                          <Trophy className="w-7 h-7 text-yellow-400 mr-2 animate-bounce" />
+                          <span className="text-lg font-semibold text-orange-600">Congratulations! Here is your plan:</span>
+                        </div>
+                        <ReactMarkdown>{roadmap}</ReactMarkdown>
+                      </div>
+                    </FadeIn>
+                  ) : (
+                    <div className="flex flex-col items-center py-10">
+                      <span className="text-[40px] mb-2">📈</span>
+                      <p className="text-gray-500 text-center text-base font-medium max-w-xs">Fill out the form to generate a visually-rich, step-by-step roadmap tailored just for you!</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </FadeIn>
+          </div>
+        </FadeIn>
+      </Container>
+    </Layout>
   );
 }
