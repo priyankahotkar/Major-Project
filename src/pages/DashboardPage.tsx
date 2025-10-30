@@ -6,6 +6,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, MessageSquare, Video, LogOut } from "lucide-react";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { db } from "@/firebase";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 
 interface UpcomingSession {
   id: string;
@@ -111,137 +113,98 @@ export function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link to="/dashboard" className="text-xl font-bold text-primary">
-                BeaconBond
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src={user?.photoURL || ""} alt={user?.displayName || "User"} />
-                <AvatarFallback>{user?.displayName?.[0] || "U"}</AvatarFallback>
-              </Avatar>
-              <div className="p-2 font-semibold">Mentee</div>
-              <Button variant="ghost" onClick={logout}>
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-white">
+      <Header />
+      <main className="flex-1 pt-20 pb-12 container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Quick Actions */}
-          <div className="col-span-1 space-y-4">
-            <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
-            <Link to="/booking">
-              <Button className="w-full justify-start" variant="outline">
-                <Calendar className="mr-2 h-5 w-5" />
-                Book Session
-              </Button>
-            </Link>
-            <Link to="/chat">
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Messages
-              </Button>
-            </Link>
-            <Link to="/discussion-forum">
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Discussion Forum
-              </Button>
-            </Link>
-            <Link to="/faq">
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                FAQs
-              </Button>
-            </Link>
-            <Link to="/roadmap">
-              <Button className="w-full justify-start" variant="outline">
-                <Calendar className="mr-2 h-5 w-5" />
-                Generate Roadmap
-              </Button>
-            </Link>
+          <div className="col-span-1">
+            <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+              <h2 className="text-xl sm:text-2xl font-extrabold mb-2 text-primary">Quick Actions</h2>
+              <div className="space-y-3">
+                <Link to="/booking">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Calendar className="mr-2 h-5 w-5" /> Book Session
+                  </Button>
+                </Link>
+                <Link to="/chat">
+                  <Button className="w-full justify-start" variant="outline">
+                    <MessageSquare className="mr-2 h-5 w-5" /> Messages
+                  </Button>
+                </Link>
+                <Link to="/discussion-forum">
+                  <Button className="w-full justify-start" variant="outline">
+                    <MessageSquare className="mr-2 h-5 w-5" /> Discussion Forum
+                  </Button>
+                </Link>
+                <Link to="/faq">
+                  <Button className="w-full justify-start" variant="outline">
+                    <MessageSquare className="mr-2 h-5 w-5" /> FAQs
+                  </Button>
+                </Link>
+                <Link to="/roadmap">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Calendar className="mr-2 h-5 w-5" /> Generate Roadmap
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
-
-          {/* Upcoming Sessions */}
-          <div className="col-span-2">
-            <h2 className="text-2xl font-bold mb-4">Upcoming Sessions</h2>
-            <div className="space-y-4">
-              {upcomingSessions.length > 0 ? (
-                upcomingSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="bg-white p-6 rounded-lg shadow-sm border border-gray-100"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+          {/* Main Content Sections */}
+          <div className="col-span-2 space-y-8">
+            {/* Upcoming Sessions */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-2xl font-extrabold mb-4 text-primary">Upcoming Sessions</h2>
+              <div className="space-y-4">
+                {upcomingSessions.length > 0 ? (
+                  upcomingSessions.map((session) => (
+                    <div key={session.id} className="p-5 bg-blue-50 rounded-lg flex items-center justify-between shadow border-b">
+                      <div className="flex items-center gap-4">
                         <Avatar>
                           <AvatarImage src={session.mentor.avatar} alt={session.mentor.name} />
                           <AvatarFallback>{session.mentor.name[0]}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold">{session.title}</h3>
-                          <p className="text-sm text-gray-500">{session.date}</p>
+                          <div className="font-bold">{session.title}</div>
+                          <div className="text-gray-500 text-sm">{session.date}</div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Link to={`/video-call/${session.id}`}>
-                          <Button className="bg-blue-500 text-white px-4 py-2">
-                            <Video className="mr-2 h-4 w-4" />
-                            Video Call
-                          </Button>
-                        </Link>
-                        <Link to={`/voice-call/${session.id}`}>
-                          <Button className="bg-green-500 text-white px-4 py-2">
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Voice Call
-                          </Button>
-                        </Link>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Link to={`/video-call/${session.id}`}><Button className="bg-blue-500 text-white"><Video className="mr-2 h-4 w-4" /> Video Call</Button></Link>
+                        <Link to={`/voice-call/${session.id}`}><Button className="bg-green-500 text-white"><MessageSquare className="mr-2 h-4 w-4" /> Voice Call</Button></Link>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500 text-center py-8">No upcoming sessions</div>
+                )}
+              </div>
+            </div>
+            {/* Mentors Section */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-2xl font-extrabold mb-4 text-primary">Mentors</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {mentors.map((mentor) => (
+                  <div key={mentor.id} className="p-4 bg-blue-50 rounded-lg shadow border">
+                    <div className="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarImage src={mentor.photoURL} alt={mentor.name} />
+                        <AvatarFallback>{mentor.name ? mentor.name[0] : "U"}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-semibold text-lg">{mentor.name}</div>
+                        <div className="text-sm text-gray-500">{mentor.expertise}</div>
+                        <div className="text-xs text-yellow-600 font-medium">Most Frequent Rating: {mentor.highestFrequencyRating}</div>
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500">No upcoming sessions</p>
-              )}
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Mentors Section */}
-      <div className="container mx-auto px-6 py-8">
-        <h2 className="text-2xl font-bold mb-4">Mentors</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mentors.map((mentor) => (
-            <div key={mentor.id} className="p-4 bg-white rounded-lg shadow-md">
-              <div className="flex items-center space-x-4">
-                <Avatar>
-                  <AvatarImage src={mentor.photoURL} alt={mentor.name} />
-                  <AvatarFallback>{mentor.name ? mentor.name[0] : "U"}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{mentor.name}</h3>
-                  <p className="text-sm text-gray-500">{mentor.expertise}</p>
-                  <p className="text-sm text-yellow-500">
-                    Most Frequent Rating: {mentor.highestFrequencyRating}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      </main>
+      <Footer />
     </div>
   );
 }

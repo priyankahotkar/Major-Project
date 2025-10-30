@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { doc, setDoc, collection, query, where, orderBy, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
 import Notifications from "@/components/Notifications";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 
 interface Mentee {
   id: string;
@@ -169,131 +171,114 @@ export function MentorDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/mentor-dashboard" className="text-xl font-bold text-primary">
-              BeaconBond - Mentor
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src={user?.photoURL || ""} alt={user?.displayName || "User"} />
-                <AvatarFallback>{user?.displayName?.[0] || "U"}</AvatarFallback>
-              </Avatar>
-              <Button variant="ghost" onClick={logout}>
-                <LogOut className="h-5 w-5" />
-              </Button>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-white">
+      <Header />
+      <main className="flex-1 pt-20 pb-12 container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Quick Actions */}
+          <div className="col-span-1">
+            <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+              <h2 className="text-xl sm:text-2xl font-extrabold mb-2 text-primary">Quick Actions</h2>
+              <div className="space-y-3">
+                <Link to="/chat">
+                  <Button className="w-full justify-start" variant="outline">
+                    <MessageSquare className="mr-2 h-5 w-5" /> Chat with Mentees
+                  </Button>
+                </Link>
+                <Link to="/discussion-forum">
+                  <Button className="w-full justify-start" variant="outline">
+                    <MessageSquare className="mr-2 h-5 w-5" /> Discussion Forum
+                  </Button>
+                </Link>
+                <Link to="/faq">
+                  <Button className="w-full justify-start" variant="outline">
+                    <MessageSquare className="mr-2 h-5 w-5" /> FAQs
+                  </Button>
+                </Link>
+                <Button onClick={generateJitsiRoom} className="w-full justify-start bg-blue-500 text-white">
+                  <PlusCircle className="mr-2 h-5 w-5" /> Start New Video Call
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Quick Actions */}
-          <div className="col-span-1 space-y-4">
-            <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
-            <Link to="/chat">
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Chat with Mentees
-              </Button>
-            </Link>
-            <Link to="/discussion-forum">
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Discussion Forum
-              </Button>
-            </Link>
-            <Button onClick={generateJitsiRoom} className="w-full justify-start bg-blue-500 text-white">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Start New Video Call
-            </Button>
-          </div>
-
-          {/* Notifications */}
-          <div className="col-span-2">
-            <h2 className="text-2xl font-bold mb-4">Notifications</h2>
-            <Notifications />
-          </div>
-
-          {/* Booked Sessions */}
-          <div className="col-span-2">
-            <h2 className="text-2xl font-bold mb-4">Booked Sessions</h2>
-            {bookedSessions.length > 0 ? (
-              <ul className="space-y-4">
-                {bookedSessions.map((session) => (
-                  <li key={session.id} className="p-4 bg-white rounded-lg shadow-sm border">
-                    <p className="font-semibold">Mentee: {session.menteeName}</p>
-                    <p>Date: {session.date}</p>
-                    <p>Time Slot: {session.timeSlot}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">No booked sessions</p>
-            )}
-          </div>
-
-          {/* Mentee List */}
-          <div className="col-span-2">
-            <h2 className="text-2xl font-bold mb-4">Your Mentees</h2>
-            <div className="space-y-4">
-              {mentees.length > 0 ? (
-                mentees.map((mentee) => (
-                  <div key={mentee.id} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between">
+          {/* Main Content Sections */}
+          <div className="col-span-2 space-y-8">
+            {/* Notifications */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-2xl font-extrabold mb-4 text-primary">Notifications</h2>
+              <Notifications />
+            </div>
+            {/* Booked Sessions */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-2xl font-extrabold mb-4 text-primary">Booked Sessions</h2>
+              {bookedSessions.length > 0 ? (
+                <ul className="space-y-4">
+                  {bookedSessions.map((session) => (
+                    <li key={session.id} className="p-4 bg-blue-50 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between shadow border-b">
+                      <span className="font-semibold">Mentee: {session.menteeName}</span>
+                      <span>Date: {session.date}</span>
+                      <span>Time Slot: {session.timeSlot}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">No booked sessions</p>
+              )}
+            </div>
+            {/* Your Mentees */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-2xl font-extrabold mb-4 text-primary">Your Mentees</h2>
+              <div className="space-y-4">
+                {mentees.length > 0 ? (
+                  mentees.map((mentee) => (
+                    <div key={mentee.id} className="bg-blue-50 p-4 rounded-lg shadow flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <Avatar>
-                          <AvatarImage src={mentee.avatar} alt={mentee.name || "Unknown"} />
-                          <AvatarFallback>{mentee.name?.[0] || "U"}</AvatarFallback> {/* Add null check */}
+                          <AvatarImage src={mentee.avatar} alt={mentee.name || 'Unknown'} />
+                          <AvatarFallback>{mentee.name?.[0] || 'U'}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold">{mentee.name || "Unknown"}</h3> {/* Add fallback */}
-                          <p className="text-sm text-gray-400">Domain: {mentee.domain || "Not Specified"}</p>
+                          <h3 className="font-semibold">{mentee.name || 'Unknown'}</h3>
+                          <p className="text-sm text-gray-400">Domain: {mentee.domain || 'Not Specified'}</p>
                         </div>
                       </div>
                       <Link to="/chat">
                         <Button variant="outline">
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Chat
+                          <MessageSquare className="mr-2 h-4 w-4" /> Chat
                         </Button>
                       </Link>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500">No mentees found</p>
-              )}
+                  ))
+                ) : (
+                  <p className="text-gray-500">No mentees found</p>
+                )}
+              </div>
             </div>
-          </div>
-
-          {/* Update Available Time Slots */}
-          <div className="col-span-2">
-            <h2 className="text-2xl font-bold mb-4">Update Available Time Slots</h2>
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              {["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"].map((slot) => (
-                <label key={slot} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    value={slot}
-                    checked={timeSlots.includes(slot)}
-                    onChange={handleTimeSlotChange}
-                    className="form-checkbox"
-                  />
-                  <span>{slot}</span>
-                </label>
-              ))}
+            {/* Time Slots */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-2xl font-extrabold mb-4 text-primary">Update Available Time Slots</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                {["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"].map((slot) => (
+                  <label key={slot} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      value={slot}
+                      checked={timeSlots.includes(slot)}
+                      onChange={handleTimeSlotChange}
+                      className="form-checkbox"
+                    />
+                    <span>{slot}</span>
+                  </label>
+                ))}
+              </div>
+              <Button onClick={updateTimeSlots} className="bg-blue-500 text-white">
+                Update Time Slots
+              </Button>
             </div>
-            <Button onClick={updateTimeSlots} className="bg-blue-500 text-white">
-              Update Time Slots
-            </Button>
           </div>
         </div>
-      </div>
+      </main>
+      <Footer />
     </div>
   );
 }
