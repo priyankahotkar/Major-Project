@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { db } from "@/firebase";
-import { collection, query, where, onSnapshot, updateDoc, doc } from "firebase/firestore";
+import { collection, query, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Notification {
   id: string;
   message: string;
-  read: boolean;
   createdAt: any;
 }
 
@@ -16,29 +15,46 @@ const Notifications: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-
-    const notificationsRef = collection(db, "notifications");
-    const q = query(notificationsRef, where("mentorId", "==", user.uid));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedNotifications = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Notification[];
-      setNotifications(fetchedNotifications);
+    // Derive notifications from unread chat messages directly
+    const chatIdsRef = collection(db, 'chats');
+    const unsubscribeChats = onSnapshot(chatIdsRef, (chatsSnapshot) => {
+      // For each chat the user is a participant in
+      const userChats = chatsSnapshot.docs.filter(chatDoc => chatDoc.id.includes(user.uid));
+      const messageUnsubscribes: Array<() => void> = [];
+      let allNotifications: Notification[] = [];
+      // For each chat, get the lastSeen value for this user
+      for (const chatDoc of userChats) {
+        const messagesRef = collection(db, 'chats', chatDoc.id, 'messages');
+        const q = query(messagesRef);
+        // Get lastSeen value from chatDoc
+        const lastSeen = (chatDoc.data().lastSeen && chatDoc.data().lastSeen[user.uid]) || 0;
+        const messageUnsubscribe = onSnapshot(q, (msgSnapshot) => {
+          let collectedNotifications: Notification[] = [];
+          msgSnapshot.docs.forEach(docSnap => {
+            const data = docSnap.data();
+            if (
+              data.senderId !== user.uid &&
+              (!data.readBy || !data.readBy.includes(user.uid)) &&
+              data.timestamp && data.timestamp.seconds > lastSeen
+            ) {
+              collectedNotifications.push({
+                id: docSnap.id,
+                message: data.text || (data.fileName ? `Sent a file: ${data.fileName}` : 'New message'),
+                createdAt: data.timestamp,
+              });
+            }
+          });
+          allNotifications = [...allNotifications, ...collectedNotifications];
+          setNotifications([...allNotifications]);
+        });
+        messageUnsubscribes.push(messageUnsubscribe);
+      }
+      return () => messageUnsubscribes.forEach(unsub => unsub());
     });
-
-    return () => unsubscribe();
+    return () => unsubscribeChats();
   }, [user]);
 
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const notificationRef = doc(db, "notifications", notificationId);
-      await updateDoc(notificationRef, { read: true });
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
-  };
+  if (!user) return null;
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
@@ -50,19 +66,9 @@ const Notifications: React.FC = () => {
           {notifications.map((notification) => (
             <li
               key={notification.id}
-              className={`p-2 rounded-lg ${
-                notification.read ? "bg-gray-100" : "bg-blue-100"
-              }`}
+              className={`p-2 rounded-lg bg-blue-100`}
             >
               <p>{notification.message}</p>
-              {!notification.read && (
-                <button
-                  className="text-blue-500 hover:underline mt-2"
-                  onClick={() => markAsRead(notification.id)}
-                >
-                  Mark as Read
-                </button>
-              )}
             </li>
           ))}
         </ul>
