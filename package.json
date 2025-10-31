@@ -17,6 +17,7 @@
     "@radix-ui/react-popover": "^1.0.7",
     "@radix-ui/react-portal": "^1.1.9",
     "@radix-ui/react-slot": "^1.0.2",
+    "axios": "^1.12.2",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "firebase": "^11.5.0",

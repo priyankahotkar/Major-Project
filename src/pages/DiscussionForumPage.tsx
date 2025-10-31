@@ -8,7 +8,6 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
-  doc,
   getDocs,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
@@ -33,155 +32,161 @@ export function DiscussionForumPage() {
   const [messages, setMessages] = useState<ForumMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [newTopic, setNewTopic] = useState("");
+  const [toxicityWarning, setToxicityWarning] = useState<string | null>(null);
 
-  // Fetch topics from Firestore
+  // Fetch topics
   useEffect(() => {
     const fetchTopics = async () => {
       const topicsRef = collection(db, "forumTopics");
       const snapshot = await getDocs(topicsRef);
-      const fetchedTopics = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-      })) as ForumTopic[];
-      setTopics(fetchedTopics);
+      setTopics(snapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name })) as ForumTopic[]);
     };
-
     fetchTopics();
   }, []);
 
-  // Fetch messages for the selected topic in real-time
+  // Fetch messages live
   useEffect(() => {
     if (!selectedTopic) return;
-
     const messagesRef = collection(db, "forumMessages", selectedTopic.id, "messages");
     const q = query(messagesRef, orderBy("timestamp", "asc"));
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedMessages = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as ForumMessage[];
-      setMessages(fetchedMessages);
+      setMessages(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ForumMessage[]);
     });
-
-    return () => unsubscribe(); // Cleanup function
+    return () => unsubscribe();
   }, [selectedTopic]);
 
-  // Handle sending a new message
+  // ✅ Perspective API Toxicity Check
+  const analyzeToxicity = async (text: string): Promise<number | null> => {
+    try {
+      const API_KEY = "AIzaSyCbVyOfLuSULS74NmExG0EXsNh7e9oKb4s"; // Your key stays same
+      const response = await fetch(
+        `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            comment: { text },
+            languages: ["en"],
+            requestedAttributes: { TOXICITY: {} },
+          }),
+        }
+      );
+
+      const data = await response.json();
+      return data.attributeScores?.TOXICITY?.summaryScore?.value || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user || !selectedTopic) return;
 
-    const messagesRef = collection(db, "forumMessages", selectedTopic.id, "messages");
+    const toxicityScore = await analyzeToxicity(newMessage);
+    if (toxicityScore !== null && toxicityScore > 0.55) {
+      setToxicityWarning("⚠️ Message appears toxic. Please rewrite politely.");
+      return;
+    }
 
-    try {
-      await addDoc(messagesRef, {
+    setToxicityWarning(null);
+
+    await addDoc(
+      collection(db, "forumMessages", selectedTopic.id, "messages"),
+      {
         text: newMessage,
         senderId: user.uid,
-        senderName: user.displayName || "Anonymous",
+        senderName: user.displayName || "User",
         timestamp: serverTimestamp(),
-      });
-      setNewMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
+      }
+    );
+    setNewMessage("");
   };
 
-  // Handle creating a new topic
+  // Create topic
   const handleCreateTopic = async () => {
     if (!newTopic.trim()) return;
-
-    const topicsRef = collection(db, "forumTopics");
-
-    try {
-      const docRef = await addDoc(topicsRef, { name: newTopic });
-      setTopics((prev) => [...prev, { id: docRef.id, name: newTopic }]);
-      setNewTopic("");
-    } catch (error) {
-      console.error("Error creating topic:", error);
-    }
+    const docRef = await addDoc(collection(db, "forumTopics"), { name: newTopic });
+    setTopics((prev) => [...prev, { id: docRef.id, name: newTopic }]);
+    setNewTopic("");
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-100 to-gray-200">
+
       {/* Header */}
-      <div className="p-4 bg-primary text-white text-center text-lg font-bold">
+      <div className="p-4 bg-indigo-600 text-white text-center text-lg font-semibold shadow-md">
         Discussion Forum
       </div>
 
-      {/* Topic Selection */}
-      <div className="p-4 bg-gray-200 border-b">
-        <div className="flex items-center space-x-4">
-          <select
-            value={selectedTopic?.id || ""}
-            onChange={(e) =>
-              setSelectedTopic(topics.find((topic) => topic.id === e.target.value) || null)
-            }
-            className="p-2 border rounded-md flex-1"
-          >
-            <option value="">Select a Topic</option>
-            {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={newTopic}
-            onChange={(e) => setNewTopic(e.target.value)}
-            placeholder="New Topic"
-            className="p-2 border rounded-md flex-1"
-          />
-          <Button onClick={handleCreateTopic} disabled={!newTopic.trim()}>
-            Create
-          </Button>
-        </div>
+      {/* Topic Bar */}
+      <div className="p-4 flex gap-3 border-b bg-white shadow-sm">
+        <select
+          className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+          value={selectedTopic?.id || ""}
+          onChange={(e) => setSelectedTopic(topics.find(t => t.id === e.target.value) || null)}
+        >
+          <option value="">Select Topic</option>
+          {topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}</option>)}
+        </select>
+
+        <input
+          value={newTopic}
+          onChange={(e) => setNewTopic(e.target.value)}
+          placeholder="New Topic"
+          className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+        />
+
+        <Button onClick={handleCreateTopic} disabled={!newTopic.trim()}>
+          Create
+        </Button>
       </div>
 
-      {/* Messages Section */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-100">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-3">
         {selectedTopic ? (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.senderId === user?.uid ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                className={`p-2 rounded-lg max-w-xs ${
-                  message.senderId === user?.uid
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-black"
-                }`}
-              >
-                <p className="font-bold">{message.senderName}</p>
-                <p>{message.text}</p>
-                <p className="text-xs opacity-70 mt-1">
-                  {message.timestamp?.toDate?.()?.toLocaleTimeString?.()}
-                </p>
+          messages.map((m) => {
+            const isOwn = m.senderId === user?.uid;
+            return (
+              <div key={m.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`p-3 rounded-2xl shadow-sm max-w-[70%] ${
+                    isOwn
+                      ? "bg-indigo-600 text-white rounded-br-none"
+                      : "bg-white text-gray-800 border rounded-bl-none"
+                  }`}
+                >
+                  <p className="font-semibold text-sm opacity-90">{m.senderName}</p>
+                  <p className="mt-1">{m.text}</p>
+                  <p className="text-[10px] opacity-60 mt-1">
+                    {m.timestamp?.toDate?.()?.toLocaleTimeString?.()}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
-          <p className="text-center text-gray-500">Select a topic to view messages</p>
+          <p className="text-center text-gray-500">Select a topic to start chatting</p>
         )}
       </div>
 
-      {/* Message Input */}
+      {/* Input */}
       {selectedTopic && (
-        <form onSubmit={handleSendMessage} className="p-4 bg-white border-t flex">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 p-2 border rounded-md focus:outline-none"
-          />
-          <Button type="submit" disabled={!newMessage.trim()} className="ml-2">
-            Send
-          </Button>
+        <form onSubmit={handleSendMessage} className="p-4 bg-white border-t flex flex-col gap-2 shadow-lg">
+          <div className="flex gap-2">
+            <input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Write a message..."
+              className="flex-1 p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
+            />
+            <Button disabled={!newMessage.trim()}>Send</Button>
+          </div>
+
+          {toxicityWarning && (
+            <p className="text-red-500 text-sm">{toxicityWarning}</p>
+          )}
         </form>
       )}
     </div>
