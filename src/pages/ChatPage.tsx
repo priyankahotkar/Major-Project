@@ -18,6 +18,8 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Header } from '@/components/layout/Header';
+import { markAllMessagesAsRead } from '@/utils/firestoreChat';
+import { setViewingChat } from '@/components/Notifications';
 
 interface Message {
   id: string;
@@ -109,6 +111,19 @@ export function ChatPage() {
         ? `${user.uid}_${selectedUser.id}`
         : `${selectedUser.id}_${user.uid}`;
 
+    // Notify Notifications component that this chat is being viewed
+    setViewingChat(chatId);
+
+    // Mark all messages as read when chat is opened
+    const readPromise = markAllMessagesAsRead(chatId, user.uid).catch(err => console.error("Error in markAllMessagesAsRead:", err));
+    
+    // Give Firestore a moment to propagate the changes
+    readPromise.then(() => {
+      setTimeout(() => {
+        console.log("[ChatPage] Firestore updates should be propagated");
+      }, 500);
+    });
+
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "asc"));
 
@@ -157,8 +172,11 @@ export function ChatPage() {
       setMessages(fetchedMessages);
     });
 
-    return () => unsubscribe(); // Cleanup function
-  }, [selectedUser, user]); // Runs when `selectedUser` or `user` changes
+    return () => {
+      setViewingChat(null);
+      unsubscribe();
+    };
+  }, [selectedUser, user, showNotification]); // Runs when `selectedUser` or `user` changes
 
   // Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
