@@ -13,25 +13,14 @@ interface Notification {
   messageId: string;
 }
 
-// Global state to track when chats are being viewed
-let viewingChatId: string | null = null;
-
-export const setViewingChat = (chatId: string | null) => {
-  viewingChatId = chatId;
-  console.log("[Notifications] ViewingChat updated to:", chatId);
-};
-
 const Notifications: React.FC = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const mountTimeRef = React.useRef<number>(Date.now());
 
   useEffect(() => {
     if (!user) return;
 
-    // Reset mount time each time effect runs (to avoid stale listeners)
-    mountTimeRef.current = Date.now();
-    console.log("[Notifications] Component effect running at:", new Date(mountTimeRef.current).toISOString());
+    console.log("[Notifications] Setting up listeners for user:", user.uid);
 
     // Map of compositeKey -> Notification
     const notificationsMap = new Map<string, Notification>();
@@ -40,9 +29,8 @@ const Notifications: React.FC = () => {
 
     const chatsRef = collection(db, "chats");
     const unsubscribeChats = onSnapshot(chatsRef, (chatsSnapshot) => {
-      console.log("[Notifications] Chats snapshot received at:", new Date().toISOString());
+      console.log("[Notifications] Chats snapshot received");
       const userChats = chatsSnapshot.docs.filter((chatDoc) => chatDoc.id.includes(user.uid));
-      console.log("[Notifications] User chats count:", userChats.length);
       const currentChatIds = new Set(userChats.map((d) => d.id));
 
       // Unsubscribe from chats that no longer apply
@@ -63,17 +51,16 @@ const Notifications: React.FC = () => {
         const chatId = chatDoc.id;
 
         if (messageUnsubscribes.has(chatId)) {
-          console.log("[Notifications] Listener already exists for chat:", chatId);
           continue;
         }
 
-        console.log("[Notifications] Setting up NEW message listener for chat:", chatId);
+        console.log("[Notifications] Setting up message listener for chat:", chatId);
 
         const messagesRef = collection(db, "chats", chatId, "messages");
         const q = query(messagesRef);
 
         const unsub = onSnapshot(q, (msgSnapshot) => {
-          console.log("[Notifications] Message snapshot received for", chatId, "at:", new Date().toISOString(), "- docs count:", msgSnapshot.docs.length);
+          console.log("[Notifications] Message snapshot for", chatId, "- docs count:", msgSnapshot.docs.length);
           const presentKeys = new Set<string>();
 
           msgSnapshot.docs.forEach((docSnap) => {
@@ -83,20 +70,18 @@ const Notifications: React.FC = () => {
             presentKeys.add(key);
 
             const senderId = data.senderId;
-            const readBy: string[] = data.readBy || [];
+            const isRead = data.isRead === true; // Must be explicitly true, not undefined
+            const isSentByCurrentUser = senderId === user.uid;
 
-            // Skip notifications for the chat currently being viewed
-            if (chatId === viewingChatId) {
-              console.log(`[Notifications] Skipping message ${msgId} - currently viewing this chat`);
-              if (notificationsMap.has(key)) notificationsMap.delete(key);
-              return;
-            }
+            // Only show notification if:
+            // 1. Message is from someone else (not current user)
+            // 2. Message is explicitly marked as unread (isRead === false, not undefined)
+            const isUnread = !isSentByCurrentUser && !isRead;
 
-            // Only show notification if message is from someone else AND not yet read by current user
-            const isUnread = senderId !== user.uid && !readBy.includes(user.uid);
+            console.log(`[Notifications] Message ${msgId}: senderId=${senderId}, isRead=${isRead}, isSentByCurrentUser=${isSentByCurrentUser}, isUnread=${isUnread}`);
 
             if (isUnread) {
-              console.log(`[Notifications] Message ${msgId} is UNREAD - adding to notifications`);
+              console.log(`[Notifications] Message ${msgId} - ADDING to notifications`);
               notificationsMap.set(key, {
                 id: key,
                 message: data.text || "Sent a file",
@@ -105,7 +90,7 @@ const Notifications: React.FC = () => {
                 messageId: msgId,
               });
             } else {
-              console.log(`[Notifications] Message ${msgId} is READ - removing from notifications`);
+              console.log(`[Notifications] Message ${msgId} - REMOVING from notifications (read or from self)`);
               if (notificationsMap.has(key)) notificationsMap.delete(key);
             }
           });
@@ -113,7 +98,7 @@ const Notifications: React.FC = () => {
           // Remove notifications for messages deleted from this snapshot
           for (const key of Array.from(notificationsMap.keys())) {
             if (key.startsWith(chatId + "_") && !presentKeys.has(key)) {
-              console.log(`[Notifications] Message ${key} no longer in snapshot - removing`);
+              console.log(`[Notifications] Message ${key} - no longer in snapshot, removing`);
               notificationsMap.delete(key);
             }
           }
@@ -124,7 +109,7 @@ const Notifications: React.FC = () => {
             const tb = b.createdAt?.seconds ?? b.createdAt?._seconds ?? 0;
             return tb - ta;
           });
-          console.log("[Notifications] Total unread notifications:", arr.length, arr.map(n => `${n.chatId}_${n.messageId}`));
+          console.log("[Notifications] Total unread notifications:", arr.length);
           setNotifications(arr);
         });
 
@@ -159,9 +144,20 @@ const Notifications: React.FC = () => {
           >
             <p className="flex-1">{notification.message}</p>
             <button
-              onClick={() => markSingleMessageAsRead(notification.chatId, notification.messageId, user!.uid)}
+              onClick={async () => {
+                console.log("[Notifications] Dismissing notification:", {
+                  chatId: notification.chatId,
+                  messageId: notification.messageId,
+                });
+                try {
+                  await markSingleMessageAsRead(notification.chatId, notification.messageId);
+                  console.log("[Notifications] Successfully marked as read");
+                } catch (error) {
+                  console.error("[Notifications] Error marking as read:", error);
+                }
+              }}
               className="flex-shrink-0 text-blue-600 hover:text-blue-800 transition-colors"
-              title="Mark as read"
+              title="Dismiss"
             >
               <X className="w-5 h-5" />
             </button>

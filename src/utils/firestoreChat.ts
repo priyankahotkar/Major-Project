@@ -87,50 +87,21 @@ const handleFileUpload = async (file: File, senderId: string, receiverId: string
 };
 
 /**
- * Marks a single message as read by adding user to readBy array
+ * Marks a single message as read
  */
-export const markSingleMessageAsRead = async (chatId: string, messageId: string, userId: string) => {
+export const markSingleMessageAsRead = async (chatId: string, messageId: string) => {
   try {
+    console.log("[markSingleMessageAsRead] Starting with:", { chatId, messageId });
     const messageRef = doc(db, "chats", chatId, "messages", messageId);
+    console.log("[markSingleMessageAsRead] Message ref created:", messageRef.path);
+    
     await updateDoc(messageRef, {
-      readBy: arrayUnion(userId),
+      isRead: true,
     });
+    console.log("[markSingleMessageAsRead] Successfully marked message as read:", messageId);
   } catch (error) {
-    console.error("Error marking message as read:", error);
-  }
-};
-
-/**
- * Marks all unread messages in a chat as read by adding user to readBy array
- */
-export const markAllMessagesAsRead = async (chatId: string, userId: string) => {
-  try {
-    console.log("[markAllMessagesAsRead] Starting for chatId:", chatId, "userId:", userId);
-    const messagesRef = collection(db, "chats", chatId, "messages");
-    const q = query(messagesRef);
-    const snapshot = await getDocs(q);
-
-    console.log("[markAllMessagesAsRead] Found", snapshot.docs.length, "messages");
-
-    // Batch update all unread messages
-    const updatePromises = snapshot.docs.map(async (docSnap) => {
-      const messageData = docSnap.data() as any;
-      const readBy = messageData.readBy || [];
-
-      // Only update if not already read by this user
-      if (!readBy.includes(userId)) {
-        console.log("[markAllMessagesAsRead] Marking message", docSnap.id, "as read");
-        return updateDoc(docSnap.ref, {
-          readBy: arrayUnion(userId),
-        });
-      }
-    });
-
-    // Wait for all updates to complete
-    await Promise.all(updatePromises);
-    console.log("[markAllMessagesAsRead] Completed successfully");
-  } catch (error) {
-    console.error("Error marking all messages as read:", error);
+    console.error("[markSingleMessageAsRead] Error marking message as read:", error);
+    throw error; // Re-throw so the caller knows it failed
   }
 };
 

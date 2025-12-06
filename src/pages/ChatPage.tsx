@@ -18,8 +18,6 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Header } from '@/components/layout/Header';
-import { markAllMessagesAsRead } from '@/utils/firestoreChat';
-import { setViewingChat } from '@/components/Notifications';
 
 interface Message {
   id: string;
@@ -28,6 +26,7 @@ interface Message {
   timestamp: any;
   fileName?: string;
   fileURL?: string;
+  isRead?: boolean;
 }
 
 interface User {
@@ -111,19 +110,6 @@ export function ChatPage() {
         ? `${user.uid}_${selectedUser.id}`
         : `${selectedUser.id}_${user.uid}`;
 
-    // Notify Notifications component that this chat is being viewed
-    setViewingChat(chatId);
-
-    // Mark all messages as read when chat is opened
-    const readPromise = markAllMessagesAsRead(chatId, user.uid).catch(err => console.error("Error in markAllMessagesAsRead:", err));
-    
-    // Give Firestore a moment to propagate the changes
-    readPromise.then(() => {
-      setTimeout(() => {
-        console.log("[ChatPage] Firestore updates should be propagated");
-      }, 500);
-    });
-
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "asc"));
 
@@ -150,7 +136,10 @@ export function ChatPage() {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const message = change.doc.data() as Message;
-          if (message.senderId !== user?.uid && selectedUser) {
+          const isRead = message.isRead || false;
+          
+          // Only show notification for unread messages from someone else
+          if (message.senderId !== user?.uid && !isRead && selectedUser) {
             const messagePreview = message.text 
               ? (message.text.length > 50 ? message.text.substring(0, 47) + '...' : message.text)
               : message.fileName 
@@ -173,7 +162,6 @@ export function ChatPage() {
     });
 
     return () => {
-      setViewingChat(null);
       unsubscribe();
     };
   }, [selectedUser, user, showNotification]); // Runs when `selectedUser` or `user` changes
@@ -195,6 +183,7 @@ export function ChatPage() {
       senderId: user.uid,
       participants: [user.uid, selectedUser.id], // Add participants to the message
       timestamp: serverTimestamp(),
+      isRead: true, // Sender's own messages are always read
     });
 
     setNewMessage("");
@@ -224,6 +213,7 @@ export function ChatPage() {
         fileName: file.name,
         fileURL,
         timestamp: serverTimestamp(),
+        isRead: true, // Sender's own file messages are always read
       });
     } catch (error) {
       console.error("Error uploading file:", error);
