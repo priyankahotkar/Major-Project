@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Send, Video, Phone, MessageSquare, Paperclip, Users, Hash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ export function ChatPage() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
   const { showNotification } = useNotification();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch user list and their last messages
   useEffect(() => {
@@ -121,6 +122,10 @@ export function ChatPage() {
         ...doc.data(),
       })) as Message[];
       setMessages(fetchedMessages);
+      // Scroll to bottom after loading messages
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 0);
     };
 
     fetchMessages();
@@ -159,6 +164,10 @@ export function ChatPage() {
       });
       
       setMessages(fetchedMessages);
+      // Scroll to bottom when new messages arrive
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 0);
     });
 
     return () => {
@@ -335,60 +344,63 @@ export function ChatPage() {
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {selectedUser ? (
               messages.length > 0 ? (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex items-end gap-2 ${
-                      message.senderId === user?.uid ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {message.senderId !== user?.uid && (
-                      <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name || 'User'} />
-                        <AvatarFallback className="bg-gray-400 text-white text-xs">
-                          {selectedUser.name?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className="flex flex-col max-w-xs md:max-w-md">
-                      <div
-                        className={`px-4 py-2 rounded-2xl ${
-                          message.senderId === user?.uid
-                            ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
-                            : "bg-white text-gray-800 shadow-sm"
-                        }`}
-                      >
-                        {message.text && <p className="break-words">{message.text}</p>}
-                        {message.fileURL && (
-                          <a
-                            href={message.fileURL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`inline-flex items-center gap-2 mt-1 ${
-                              message.senderId === user?.uid ? "text-blue-100" : "text-blue-600"
-                            } hover:underline`}
-                          >
-                            <Paperclip className="w-3 h-3" />
-                            {message.fileName}
-                          </a>
-                        )}
+                <>
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex items-end gap-2 ${
+                        message.senderId === user?.uid ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      {message.senderId !== user?.uid && (
+                        <Avatar className="w-8 h-8 flex-shrink-0">
+                          <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name || 'User'} />
+                          <AvatarFallback className="bg-gray-400 text-white text-xs">
+                            {selectedUser.name?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="flex flex-col max-w-xs md:max-w-md">
+                        <div
+                          className={`px-4 py-2 rounded-2xl ${
+                            message.senderId === user?.uid
+                              ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
+                              : "bg-white text-gray-800 shadow-sm"
+                          }`}
+                        >
+                          {message.text && <p className="break-words">{message.text}</p>}
+                          {message.fileURL && (
+                            <a
+                              href={message.fileURL}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center gap-2 mt-1 ${
+                                message.senderId === user?.uid ? "text-blue-100" : "text-blue-600"
+                              } hover:underline`}
+                            >
+                              <Paperclip className="w-3 h-3" />
+                              {message.fileName}
+                            </a>
+                          )}
+                        </div>
+                        <p className={`text-xs mt-1 px-1 ${
+                          message.senderId === user?.uid ? "text-right text-gray-600" : "text-gray-500"
+                        }`}>
+                          {message.timestamp?.toDate?.()?.toLocaleTimeString?.()}
+                        </p>
                       </div>
-                      <p className={`text-xs mt-1 px-1 ${
-                        message.senderId === user?.uid ? "text-right text-gray-600" : "text-gray-500"
-                      }`}>
-                        {message.timestamp?.toDate?.()?.toLocaleTimeString?.()}
-                      </p>
+                      {message.senderId === user?.uid && (
+                        <Avatar className="w-8 h-8 flex-shrink-0">
+                          <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'You'} />
+                          <AvatarFallback className="bg-blue-400 text-white text-xs">
+                            {user?.displayName?.[0] || user?.email?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                     </div>
-                    {message.senderId === user?.uid && (
-                      <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'You'} />
-                        <AvatarFallback className="bg-blue-400 text-white text-xs">
-                          {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                ))
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <Hash className="w-16 h-16 mb-4 opacity-30" />
