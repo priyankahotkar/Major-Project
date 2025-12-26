@@ -7,6 +7,7 @@ interface Notification {
   message: string;
   timestamp: Date;
   onClick?: () => void;
+  onClose?: () => void;
 }
 
 interface NotificationContextType {
@@ -20,6 +21,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const showNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp'>) => {
+    console.log('[NotificationContext] showNotification called:', notification.title, notification.message);
     const id = Math.random().toString(36).substring(7);
     const newNotification = {
       ...notification,
@@ -27,16 +29,30 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       timestamp: new Date(),
     };
 
-    setNotifications((prev) => [...prev, newNotification]);
+    // Use functional updater and log resulting length for diagnostics
+    setNotifications((prev) => {
+      const next = [...prev, newNotification];
+      try { console.log('[NotificationContext] showNotification -> new notifications length:', next.length, 'ids:', next.map(n=>n.id)); } catch(e) {}
+      return next;
+    });
   }, []);
 
   const clearNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+    console.log('[NotificationContext] clearNotification called for id:', id);
+    setNotifications((prev) => {
+      const found = prev.find((n) => n.id === id);
+      if (found && typeof found.onClose === 'function') {
+        try { found.onClose(); } catch (e) { console.error('notification onClose error', e); }
+      }
+      return prev.filter((notification) => notification.id !== id);
+    });
   }, []);
 
   return (
     <NotificationContext.Provider value={{ showNotification, clearNotification }}>
       {children}
+      {/* Provider mounted */}
+      {console.log('[NotificationContext] Provider mounted')}
       <NotificationContainer
         notifications={notifications}
         onClose={clearNotification}

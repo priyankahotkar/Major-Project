@@ -10,6 +10,7 @@ import { VideoCallPage } from "./pages/VideoCallPage";
 import { VoiceCallPage } from "./pages/VoiceCallPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import Notifications from "./components/Notifications";
 import { v4 as uuidv4 } from "uuid";
 import { MentorDashboardPage } from "./pages/MentorDashboard"; // Import MentorDashboard
 import { DiscussionForumPage } from "./pages/DiscussionForumPage"; // Import the new page
@@ -58,6 +59,8 @@ const App: React.FC = () => {
     <Router>
       <AuthProvider>
         <NotificationProvider>
+          {/* Global notifications listener (shows popups for unread messages) */}
+          <Notifications />
           <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />

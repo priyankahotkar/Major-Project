@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { db } from "@/firebase";
-import { collection, query, onSnapshot } from "firebase/firestore";
+import { collection, query, onSnapshot, collectionGroup } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { markSingleMessageAsRead } from "@/utils/firestoreChat";
+import { useNotification } from "@/contexts/NotificationContext";
 import { X } from "lucide-react";
 
 interface Notification {
@@ -15,157 +16,103 @@ interface Notification {
 
 const Notifications: React.FC = () => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { showNotification } = useNotification();
+  console.log('[Notifications] render - user:', user?.uid, 'showNotification:', typeof showNotification);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      console.log('[Notifications] useEffect - no user, exiting');
+      return;
+    }
 
-    console.log("[Notifications] Setting up listeners for user:", user.uid);
+    console.log("[Notifications] Setting up listeners for user:", user.uid, 'showNotificationExists:', typeof showNotification === 'function');
 
     // Map of compositeKey -> Notification
-    const notificationsMap = new Map<string, Notification>();
+    const notificationsMap = new Map<string, Notification>(); // Map of compositeKey -> Notification (used to avoid duplicate popups)
     // Map chatId -> unsubscribe
     const messageUnsubscribes = new Map<string, () => void>();
 
-    const chatsRef = collection(db, "chats");
-    const unsubscribeChats = onSnapshot(chatsRef, (chatsSnapshot) => {
-      console.log("[Notifications] Chats snapshot received");
-      const userChats = chatsSnapshot.docs.filter((chatDoc) => chatDoc.id.includes(user.uid));
-      const currentChatIds = new Set(userChats.map((d) => d.id));
+    // Listen to all 'messages' subcollections across the DB and filter by chatId containing the user
+    const messagesGroup = collectionGroup(db, "messages");
+    const q = query(messagesGroup);
+    const unsubscribeMsgs = onSnapshot(q, (snapshot) => {
+      console.log("[Notifications] collectionGroup(messages) snapshot received - docCount:", snapshot.docs.length);
+      // Process only document changes (avoid showing popups for existing docs on initial load)
+      snapshot.docChanges().forEach((change) => {
+        if (change.type !== 'added') return;
 
-      // Unsubscribe from chats that no longer apply
-      for (const [chatId, unsub] of Array.from(messageUnsubscribes.entries())) {
-        if (!currentChatIds.has(chatId)) {
-          console.log("[Notifications] Unsubscribing from chat:", chatId);
-          try { unsub(); } catch (e) {}
-          messageUnsubscribes.delete(chatId);
-          // remove any notifications from that chat
-          for (const key of Array.from(notificationsMap.keys())) {
-            if (key.startsWith(chatId + "_")) notificationsMap.delete(key);
-          }
-        }
-      }
-
-      // Ensure listeners exist for current user chats
-      for (const chatDoc of userChats) {
-        const chatId = chatDoc.id;
-
-        if (messageUnsubscribes.has(chatId)) {
-          continue;
+        const docSnap = change.doc;
+        const data = docSnap.data() as any;
+        // Determine parent chat id from the document reference path
+        const chatRef = docSnap.ref.parent.parent;
+        const chatId = chatRef?.id;
+        if (!chatId) {
+          console.log('[Notifications] skipped message - no parent chat id', docSnap.id);
+          return;
         }
 
-        console.log("[Notifications] Setting up message listener for chat:", chatId);
+        // Only care about chats that include this user in their id
+        if (!chatId.includes(user.uid)) return;
 
-        const messagesRef = collection(db, "chats", chatId, "messages");
-        const q = query(messagesRef);
+        const msgId = docSnap.id;
+        const key = `${chatId}_${msgId}`;
 
-        const unsub = onSnapshot(q, (msgSnapshot) => {
-          console.log("[Notifications] Message snapshot for", chatId, "- docs count:", msgSnapshot.docs.length);
-          const presentKeys = new Set<string>();
+        const senderId = data.senderId;
+        const isRead = data.isRead === true;
+        const isSentByCurrentUser = senderId === user.uid;
+        const isUnread = !isSentByCurrentUser && !isRead;
 
-          msgSnapshot.docs.forEach((docSnap) => {
-            const data = docSnap.data() as any;
-            const msgId = docSnap.id;
-            const key = `${chatId}_${msgId}`;
-            presentKeys.add(key);
+        console.log(`[Notifications] change.added message ${msgId} in chat ${chatId}: sender=${senderId}, isRead=${isRead}, isUnread=${isUnread}`);
 
-            const senderId = data.senderId;
-            const isRead = data.isRead === true; // Must be explicitly true, not undefined
-            const isSentByCurrentUser = senderId === user.uid;
-
-            // Only show notification if:
-            // 1. Message is from someone else (not current user)
-            // 2. Message is explicitly marked as unread (isRead === false, not undefined)
-            const isUnread = !isSentByCurrentUser && !isRead;
-
-            console.log(`[Notifications] Message ${msgId}: senderId=${senderId}, isRead=${isRead}, isSentByCurrentUser=${isSentByCurrentUser}, isUnread=${isUnread}`);
-
-            if (isUnread) {
-              console.log(`[Notifications] Message ${msgId} - ADDING to notifications`);
-              notificationsMap.set(key, {
-                id: key,
-                message: data.text || "Sent a file",
-                createdAt: data.timestamp,
-                chatId,
-                messageId: msgId,
+        if (isUnread) {
+          if (!notificationsMap.has(key)) {
+            const notificationObj = {
+              id: key,
+              message: data.text || 'Sent a file',
+              createdAt: data.timestamp,
+              chatId,
+              messageId: msgId,
+            } as Notification;
+            notificationsMap.set(key, notificationObj);
+            try {
+              console.log('[Notifications] calling showNotification for', key);
+              showNotification({
+                title: `New message`,
+                message: notificationObj.message,
+                onClick: () => window.focus(),
+                onClose: async () => {
+                  try {
+                    await markSingleMessageAsRead(chatId, msgId);
+                    console.log('[Notifications] markSingleMessageAsRead called from popup onClose', key);
+                  } catch (e) {
+                    console.error('[Notifications] Error marking message read from popup onClose', e);
+                  }
+                },
               });
-            } else {
-              console.log(`[Notifications] Message ${msgId} - REMOVING from notifications (read or from self)`);
-              if (notificationsMap.has(key)) notificationsMap.delete(key);
-            }
-          });
-
-          // Remove notifications for messages deleted from this snapshot
-          for (const key of Array.from(notificationsMap.keys())) {
-            if (key.startsWith(chatId + "_") && !presentKeys.has(key)) {
-              console.log(`[Notifications] Message ${key} - no longer in snapshot, removing`);
-              notificationsMap.delete(key);
+            } catch (e) {
+              console.error('[Notifications] Error calling showNotification', e);
             }
           }
+        }
+      });
 
-          // Update state from map, sorted by time desc
-          const arr = Array.from(notificationsMap.values()).sort((a, b) => {
-            const ta = a.createdAt?.seconds ?? a.createdAt?._seconds ?? 0;
-            const tb = b.createdAt?.seconds ?? b.createdAt?._seconds ?? 0;
-            return tb - ta;
-          });
-          console.log("[Notifications] Total unread notifications:", arr.length);
-          setNotifications(arr);
-        });
-
-        messageUnsubscribes.set(chatId, unsub);
-      }
     });
 
-    return () => {
-      console.log("[Notifications] Cleaning up listeners");
-      try { unsubscribeChats(); } catch (e) {}
-      for (const unsub of Array.from(messageUnsubscribes.values())) {
-        try { unsub(); } catch (e) {}
-      }
+    // store unsubscribe to allow cleanup
+    const unsubscribe = () => {
+      console.log('[Notifications] Cleaning up listeners');
+      try { unsubscribeMsgs(); } catch (e) {}
       notificationsMap.clear();
-      setNotifications([]);
     };
+
+    return unsubscribe;
   }, [user]);
 
   if (!user) return null;
 
-  return (
-    <div className="space-y-3">
-      {notifications.length === 0 ? (
-        <div className="border p-4 rounded-xl text-center text-gray-500 bg-gray-50">
-          No new notifications
-        </div>
-      ) : (
-        notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className="p-3 rounded-xl bg-blue-100 border border-blue-300 text-blue-900 shadow-sm flex items-start justify-between gap-2"
-          >
-            <p className="flex-1">{notification.message}</p>
-            <button
-              onClick={async () => {
-                console.log("[Notifications] Dismissing notification:", {
-                  chatId: notification.chatId,
-                  messageId: notification.messageId,
-                });
-                try {
-                  await markSingleMessageAsRead(notification.chatId, notification.messageId);
-                  console.log("[Notifications] Successfully marked as read");
-                } catch (error) {
-                  console.error("[Notifications] Error marking as read:", error);
-                }
-              }}
-              className="flex-shrink-0 text-blue-600 hover:text-blue-800 transition-colors"
-              title="Dismiss"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        ))
-      )}
-    </div>
-  );
+  // This component only listens and triggers toast popups via NotificationContext.
+  // No in-page UI is rendered here.
+  return null;
 };
 
 export default Notifications;

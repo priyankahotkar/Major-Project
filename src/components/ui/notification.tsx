@@ -100,6 +100,7 @@ interface NotificationContainerProps {
     message: string;
     timestamp: Date;
     onClick?: () => void;
+    onClose?: () => void;
   }>;
   onClose: (id: string) => void;
 }
@@ -108,16 +109,18 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
   notifications,
   onClose,
 }) => {
+  console.log('[NotificationContainer] render - notifications count:', notifications.length);
+  console.log('[NotificationContainer] notifications:', notifications.map(n => ({ id: n.id, title: n.title })));
   return (
-    <div className="fixed top-0 right-0 z-50 p-4 space-y-4">
+    <div className="fixed top-16 right-4 z-[9999] p-4 space-y-4">
       {notifications.map((notification, index) => (
         <Notification
           key={notification.id}
           {...notification}
           onClose={onClose}
-          style={{
-            top: `${(index * 120) + 16}px`
-          }}
+          // style={{
+          //   top: `${(index * 120) + 16}px`
+          // }}
         />
       ))}
     </div>

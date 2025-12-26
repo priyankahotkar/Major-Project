@@ -3,7 +3,7 @@ import { Send, Video, Phone, MessageSquare, Paperclip, Users, Hash } from "lucid
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useNotification } from "@/contexts/NotificationContext";
+// Notifications are handled globally by src/components/Notifications.tsx
 import { auth, db, storage } from "@/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
@@ -15,6 +15,8 @@ import {
   serverTimestamp,
   getDocs,
   limit,
+  updateDoc,
+  doc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Header } from '@/components/layout/Header';
@@ -44,7 +46,6 @@ export function ChatPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
-  const { showNotification } = useNotification();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch user list and their last messages
@@ -114,66 +115,52 @@ export function ChatPage() {
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "asc"));
 
-    // Fetch previous messages
-    const fetchMessages = async () => {
-      const snapshot = await getDocs(q);
-      const fetchedMessages = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Message[];
-      setMessages(fetchedMessages);
-      // Scroll to bottom after loading messages
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 0);
-    };
-
-    fetchMessages();
+    // Use a ref to ignore the initial snapshot so we don't treat existing messages as "new"
+    let initialSnapshot = true;
 
     // Listen for new messages in real-time
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const fetchedMessages = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Message[];
 
-      // Check for new messages
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const message = change.doc.data() as Message;
-          const isRead = message.isRead || false;
-          
-          // Only show notification for unread messages from someone else
-          if (message.senderId !== user?.uid && !isRead && selectedUser) {
-            const messagePreview = message.text 
-              ? (message.text.length > 50 ? message.text.substring(0, 47) + '...' : message.text)
-              : message.fileName 
-                ? `Sent a file: ${message.fileName}`
-                : 'Sent a message';
-                
-            showNotification({
-              title: `New message from ${selectedUser.name}`,
-              message: messagePreview,
-              onClick: () => {
-                // Ensure the chat window is focused
-                window.focus();
-              }
-            });
+      // Mark all unread messages from others as read when user views the chat
+      snapshot.docs.forEach(async (docSnap) => {
+        const messageData = docSnap.data();
+        // Only mark messages from others as read
+        if (messageData.senderId !== user.uid) {
+          const readBy = messageData.readBy || [];
+          if (!readBy.includes(user.uid)) {
+            try {
+              await updateDoc(docSnap.ref, {
+                readBy: [...readBy, user.uid]
+              });
+            } catch (error) {
+              console.error('Error marking message as read:', error);
+            }
           }
         }
       });
-      
+
+      // On the very first snapshot we get the existing messages; skip notifications for these
+      if (initialSnapshot) {
+        initialSnapshot = false;
+        setMessages(fetchedMessages);
+        // Scroll to bottom after initial load
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
+        return;
+      }
+
+      // For subsequent snapshots we simply update the message list; global Notifications component
+      // will handle popup toasts for unread messages across chats.
       setMessages(fetchedMessages);
       // Scroll to bottom when new messages arrive
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 0);
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
     });
 
-    return () => {
-      unsubscribe();
-    };
-  }, [selectedUser, user, showNotification]); // Runs when `selectedUser` or `user` changes
+    return () => unsubscribe();
+  }, [selectedUser, user]); // Runs when `selectedUser` or `user` changes
 
   // Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -192,7 +179,7 @@ export function ChatPage() {
       senderId: user.uid,
       participants: [user.uid, selectedUser.id], // Add participants to the message
       timestamp: serverTimestamp(),
-      isRead: true, // Sender's own messages are always read
+      readBy: [user.uid], // Sender's own messages are always read
     });
 
     setNewMessage("");

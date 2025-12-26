@@ -14,6 +14,7 @@ export const NotificationListener: React.FC = () => {
 
     const unsubscribers: Array<() => void> = [];
     const processedMessages = new Set<string>();
+    const chatListeners = new Map<string, () => void>();
 
     // Get all chats where the user is a participant
     const chatsRef = collection(db, "chats");
@@ -23,24 +24,50 @@ export const NotificationListener: React.FC = () => {
         .map(doc => doc.id)
         .filter(id => id.includes(user.uid));
 
+      // Remove listeners for chats that no longer exist
+      chatListeners.forEach((unsubscribe, chatId) => {
+        if (!chatIds.includes(chatId)) {
+          unsubscribe();
+          chatListeners.delete(chatId);
+        }
+      });
+
       // Set up listeners for messages in each chat
       chatIds.forEach(chatId => {
+        // Skip if listener already exists for this chat
+        if (chatListeners.has(chatId)) return;
+
         const messagesRef = collection(db, "chats", chatId, "messages");
-        const q = query(messagesRef, orderBy("timestamp", "desc"), limit(1));
+        const q = query(messagesRef, orderBy("timestamp", "desc"));
+
+        let isInitialLoad = true;
 
         const unsubscribe = onSnapshot(q, async (messagesSnapshot) => {
+          // Skip initial snapshot - only process new messages after initial load
+          if (isInitialLoad) {
+            isInitialLoad = false;
+            return;
+          }
+
           for (const change of messagesSnapshot.docChanges()) {
-            // Only process new messages
+            // Only process newly added messages
             if (change.type === 'added') {
               const messageData = change.doc.data();
               const messageId = change.doc.id;
+              const messageTimestamp = messageData.timestamp?.toMillis?.() || Date.now();
 
-              // Skip if we've already processed this message
-              if (processedMessages.has(messageId)) continue;
-              processedMessages.add(messageId);
+              // Create unique key for this message
+              const messageKey = `${chatId}_${messageId}_${messageTimestamp}`;
 
-              // Only show notification for messages from others
-              if (messageData.senderId && messageData.senderId !== user.uid) {
+              // Skip if we've already processed this message (within this session)
+              if (processedMessages.has(messageKey)) continue;
+              processedMessages.add(messageKey);
+
+              // Simple logic: Only show popup if message is unread and from others
+              const isUnread = !messageData.readBy || !messageData.readBy.includes(user.uid);
+              const isFromOthers = messageData.senderId && messageData.senderId !== user.uid;
+
+              if (isUnread && isFromOthers) {
                 try {
                   // Get sender's info
                   const userDoc = await getDocs(
@@ -52,15 +79,10 @@ export const NotificationListener: React.FC = () => {
                     const content = messageData.text || (messageData.fileName ? 'Sent a file' : 'New message');
                     const previewText = content.length > 50 ? content.substring(0, 47) + '...' : content;
                     
-                    console.log('Showing notification for message:', {
-                      sender: senderInfo.name,
-                      content: previewText
-                    }); // Debug log
-                    
-                    showNotification(
-                      `${senderInfo.name}: ${previewText}`,
-                      'info'
-                    );
+                    showNotification({
+                      title: `New message from ${senderInfo.name}`,
+                      message: previewText,
+                    });
                   }
                 } catch (error) {
                   console.error('Error fetching sender info:', error);
@@ -70,6 +92,7 @@ export const NotificationListener: React.FC = () => {
           }
         });
 
+        chatListeners.set(chatId, unsubscribe);
         unsubscribers.push(unsubscribe);
       });
     });
@@ -79,6 +102,7 @@ export const NotificationListener: React.FC = () => {
     // Cleanup function
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
+      chatListeners.clear();
     };
   }, [user, showNotification]);
 
