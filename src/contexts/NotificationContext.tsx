@@ -52,7 +52,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     <NotificationContext.Provider value={{ showNotification, clearNotification }}>
       {children}
       {/* Provider mounted */}
-      {console.log('[NotificationContext] Provider mounted')}
+      {/* console.log('[NotificationContext] Provider mounted') */}
       <NotificationContainer
         notifications={notifications}
         onClose={clearNotification}
