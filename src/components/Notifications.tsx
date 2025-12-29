@@ -1,10 +1,9 @@
 import React, { useEffect } from "react";
 import { db } from "@/firebase";
-import { collection, query, onSnapshot, collectionGroup } from "firebase/firestore";
+import { query, onSnapshot, collectionGroup, doc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { markSingleMessageAsRead } from "@/utils/firestoreChat";
 import { useNotification } from "@/contexts/NotificationContext";
-import { X } from "lucide-react";
 
 interface Notification {
   id: string; // composite key: `${chatId}_${msgId}`
@@ -29,8 +28,6 @@ const Notifications: React.FC = () => {
 
     // Map of compositeKey -> Notification
     const notificationsMap = new Map<string, Notification>(); // Map of compositeKey -> Notification (used to avoid duplicate popups)
-    // Map chatId -> unsubscribe
-    const messageUnsubscribes = new Map<string, () => void>();
 
     // Listen to all 'messages' subcollections across the DB and filter by chatId containing the user
     const messagesGroup = collectionGroup(db, "messages");
@@ -74,24 +71,56 @@ const Notifications: React.FC = () => {
               messageId: msgId,
             } as Notification;
             notificationsMap.set(key, notificationObj);
-            try {
-              console.log('[Notifications] calling showNotification for', key);
-              showNotification({
-                title: `New message`,
-                message: notificationObj.message,
-                onClick: () => window.focus(),
-                onClose: async () => {
-                  try {
-                    await markSingleMessageAsRead(chatId, msgId);
-                    console.log('[Notifications] markSingleMessageAsRead called from popup onClose', key);
-                  } catch (e) {
-                    console.error('[Notifications] Error marking message read from popup onClose', e);
-                  }
-                },
-              });
-            } catch (e) {
-              console.error('[Notifications] Error calling showNotification', e);
-            }
+            
+            // Fetch sender info and show notification
+            (async () => {
+              try {
+                // Get sender's info - users are stored with document ID = uid
+                const userDocRef = doc(db, "users", senderId);
+                const userDocSnap = await getDoc(userDocRef);
+                const senderInfo = userDocSnap.exists() ? userDocSnap.data() : null;
+                
+                // Try multiple possible name fields
+                const senderName = senderInfo?.name || 
+                                  senderInfo?.displayName || 
+                                  senderInfo?.details?.fullName ||
+                                  `User ${senderId.substring(0, 6)}` ||
+                                  'Someone';
+                
+                const content = notificationObj.message;
+                const previewText = content.length > 50 ? content.substring(0, 47) + '...' : content;
+                
+                console.log('[Notifications] calling showNotification for', key);
+                showNotification({
+                  title: `New message from ${senderName}`,
+                  message: `${senderName}: ${previewText}`,
+                  onClick: () => window.focus(),
+                  onClose: async () => {
+                    try {
+                      await markSingleMessageAsRead(chatId, msgId);
+                      console.log('[Notifications] markSingleMessageAsRead called from popup onClose', key);
+                    } catch (e) {
+                      console.error('[Notifications] Error marking message read from popup onClose', e);
+                    }
+                  },
+                });
+              } catch (e) {
+                console.error('[Notifications] Error fetching sender info or calling showNotification', e);
+                // Fallback notification
+                showNotification({
+                  title: 'New message',
+                  message: `Someone: ${notificationObj.message}`,
+                  onClick: () => window.focus(),
+                  onClose: async () => {
+                    try {
+                      await markSingleMessageAsRead(chatId, msgId);
+                    } catch (err) {
+                      console.error('[Notifications] Error marking message read', err);
+                    }
+                  },
+                });
+              }
+            })();
           }
         }
       });

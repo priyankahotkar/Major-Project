@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../firebase';
-import { collection, query, onSnapshot, orderBy, getDocs, where, limit } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore';
 import { useNotification } from '../contexts/NotificationContext';
 
 export const NotificationListener: React.FC = () => {
@@ -68,25 +68,45 @@ export const NotificationListener: React.FC = () => {
               const isFromOthers = messageData.senderId && messageData.senderId !== user.uid;
 
               if (isUnread && isFromOthers) {
-                try {
-                  // Get sender's info
-                  const userDoc = await getDocs(
-                    query(collection(db, "users"), where("uid", "==", messageData.senderId))
-                  );
-                  const senderInfo = userDoc.docs[0]?.data();
+                // Use IIFE to handle async properly
+                (async () => {
+                  try {
+                    // Get sender's info - users are stored with document ID = uid
+                    const userDocRef = doc(db, "users", messageData.senderId);
+                    const userDocSnap = await getDoc(userDocRef);
+                    const senderInfo = userDocSnap.exists() ? userDocSnap.data() : null;
 
-                  if (senderInfo) {
+                    // Try multiple possible name fields
+                    let senderName = 'Someone';
+                    if (senderInfo) {
+                      senderName = senderInfo.name || 
+                                   senderInfo.displayName || 
+                                   senderInfo.details?.fullName ||
+                                   `User ${messageData.senderId.substring(0, 6)}` ||
+                                   'Someone';
+                    } else {
+                      senderName = `User ${messageData.senderId.substring(0, 6)}`;
+                    }
+                    
                     const content = messageData.text || (messageData.fileName ? 'Sent a file' : 'New message');
                     const previewText = content.length > 50 ? content.substring(0, 47) + '...' : content;
                     
                     showNotification({
-                      title: `New message from ${senderInfo.name}`,
-                      message: previewText,
+                      title: `New message from ${senderName}`,
+                      message: `${senderName}: ${previewText}`,
+                    });
+                  } catch (error) {
+                    console.error('Error fetching sender info:', error);
+                    // Fallback notification even if error occurs
+                    const content = messageData.text || (messageData.fileName ? 'Sent a file' : 'New message');
+                    const previewText = content.length > 50 ? content.substring(0, 47) + '...' : content;
+                    
+                    showNotification({
+                      title: 'New message',
+                      message: `Someone: ${previewText}`,
                     });
                   }
-                } catch (error) {
-                  console.error('Error fetching sender info:', error);
-                }
+                })();
               }
             }
           }
