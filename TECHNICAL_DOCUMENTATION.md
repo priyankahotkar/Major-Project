@@ -1,6 +1,7 @@
 # MentorConnect (BeaconBond) - Complete Technical Documentation
 
 ## Table of Contents
+
 1. [System Architecture](#system-architecture)
 2. [Technology Stack](#technology-stack)
 3. [Database Structure (Firestore)](#database-structure-firestore)
@@ -19,9 +20,11 @@
 ## System Architecture
 
 ### Overview
+
 MentorConnect is a **full-stack web application** built as a **Single Page Application (SPA)** using React and Firebase. It connects mentors and mentees for learning sessions, discussions, and personalized guidance.
 
 ### Architecture Pattern
+
 - **Frontend**: React 18+ with TypeScript
 - **Backend**: Firebase (Firestore, Authentication, Storage)
 - **Real-time Communication**: Firebase Realtime Listeners (onSnapshot)
@@ -30,6 +33,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 - **State Management**: React Context API
 
 ### Key Design Patterns
+
 - **Context API**: Global state (Auth, Notifications, Theme)
 - **Component Composition**: Reusable UI components
 - **Real-time Listeners**: Firestore onSnapshot for live updates
@@ -40,6 +44,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ## Technology Stack
 
 ### Frontend
+
 - **React 18+**: UI framework
 - **TypeScript**: Type safety
 - **Vite**: Build tool and dev server
@@ -50,6 +55,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 - **React Markdown**: Markdown rendering
 
 ### Backend & Services
+
 - **Firebase Authentication**: Google OAuth, Email/Password
 - **Cloud Firestore**: NoSQL database
 - **Firebase Storage**: File storage
@@ -58,6 +64,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 - **Perspective API**: Toxicity detection (Discussion Forum)
 
 ### External APIs
+
 - **GitHub API**: Fetch user repositories and activity
 - **LeetCode API**: Fetch user statistics
 - **Codeforces API**: Fetch contest ratings and problems
@@ -69,6 +76,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ### Collections Overview
 
 #### 1. `users` Collection
+
 ```typescript
 {
   uid: string,                    // Firebase Auth UID
@@ -89,6 +97,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ```
 
 #### 2. `chats` Collection
+
 ```typescript
 // Document ID: `${uid1}_${uid2}` (sorted alphabetically)
 {
@@ -111,6 +120,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ```
 
 #### 3. `bookings` Collection
+
 ```typescript
 {
   mentorId: string,
@@ -126,6 +136,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ```
 
 #### 4. `videoRooms` Collection
+
 ```typescript
 {
   roomId: string,                // Jitsi room ID
@@ -138,13 +149,15 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ```
 
 #### 5. `forumTopics` Collection
+
 ```typescript
 {
-  name: string                   // Topic name
+  name: string; // Topic name
 }
 ```
 
 #### 6. `forumMessages` Collection
+
 ```typescript
 // Subcollection: `{topicId}/messages`
 {
@@ -156,6 +169,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ```
 
 #### 7. `faqs` Collection
+
 ```typescript
 {
   question: string,
@@ -172,6 +186,7 @@ MentorConnect is a **full-stack web application** built as a **Single Page Appli
 ## Authentication System
 
 ### Flow Diagram
+
 ```
 User → Google OAuth / Email-Password → Firebase Auth → User Document Created → Role Selection → Dashboard
 ```
@@ -181,17 +196,21 @@ User → Google OAuth / Email-Password → Firebase Auth → User Document Creat
 **File**: `src/contexts/AuthContext.tsx`
 
 #### Key Functions:
+
 1. **Sign In with Google**
+
    - Uses Firebase `signInWithPopup`
    - Checks if user is new (`isNewUser`)
    - Creates user document in Firestore if new
    - Redirects to role selection if role not set
 
 2. **Email/Password Authentication**
+
    - `signInWithEmail`: Existing users
    - `registerWithEmail`: New users with role selection
 
 3. **Role Management**
+
    - Role stored in Firestore `users` collection
    - Role-based routing:
      - `mentor` → `/mentor-dashboard`
@@ -203,9 +222,12 @@ User → Google OAuth / Email-Password → Firebase Auth → User Document Creat
    - Maintains session across page refreshes
 
 ### Protected Routes
+
 ```typescript
 // src/App.tsx
-<PrivateRoute> // Checks if user is authenticated
+<PrivateRoute>
+  {" "}
+  // Checks if user is authenticated
   <RoleBasedDashboard /> // Routes based on role
 </PrivateRoute>
 ```
@@ -215,6 +237,7 @@ User → Google OAuth / Email-Password → Firebase Auth → User Document Creat
 ## Roadmap Generation System
 
 ### Overview
+
 AI-powered personalized learning roadmap using Google Gemini API, analyzing user profiles from GitHub, LeetCode, and Codeforces.
 
 ### Architecture
@@ -222,6 +245,7 @@ AI-powered personalized learning roadmap using Google Gemini API, analyzing user
 **File**: `src/services/gemini.ts`
 
 #### Process Flow:
+
 ```
 User Input (GitHub, LeetCode, Codeforces usernames + Goal + Duration)
     ↓
@@ -242,6 +266,7 @@ Display to User
 ### Implementation Details
 
 #### 1. Data Fetching
+
 ```typescript
 // GitHub Data
 - User profile: public_repos, followers
@@ -259,7 +284,9 @@ Display to User
 ```
 
 #### 2. Prompt Engineering
+
 The prompt includes:
+
 - User's current skill assessment
 - Goals and duration
 - Platform-specific metrics
@@ -271,15 +298,17 @@ The prompt includes:
   - Milestones
 
 #### 3. Response Format
+
 - Returns markdown-formatted roadmap
 - Rendered using `react-markdown`
 - Includes sections, subsections, and formatting
 
 ### API Configuration
+
 ```typescript
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 ```
 
 ---
@@ -291,6 +320,7 @@ const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 The notification system has **two components**:
 
 1. **NotificationListener** (`src/components/NotificationListener.tsx`)
+
    - Listens for new unread messages
    - Shows popup notifications in top-right
 
@@ -320,19 +350,19 @@ Notifications Disappear
 ### Implementation Details
 
 #### 1. Real-time Listener Setup
+
 ```typescript
 // Listen to all chats user participates in
 const chatsRef = collection(db, "chats");
 onSnapshot(chatsRef, (snapshot) => {
   // Filter chats containing user.uid
-  const chatIds = snapshot.docs
-    .filter(doc => doc.id.includes(user.uid));
-  
+  const chatIds = snapshot.docs.filter((doc) => doc.id.includes(user.uid));
+
   // Set up message listeners for each chat
-  chatIds.forEach(chatId => {
+  chatIds.forEach((chatId) => {
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("timestamp", "desc"));
-    
+
     onSnapshot(q, (messagesSnapshot) => {
       // Process new messages
     });
@@ -341,9 +371,9 @@ onSnapshot(chatsRef, (snapshot) => {
 ```
 
 #### 2. Unread Detection Logic
+
 ```typescript
-const isUnread = !messageData.readBy || 
-                 !messageData.readBy.includes(user.uid);
+const isUnread = !messageData.readBy || !messageData.readBy.includes(user.uid);
 const isFromOthers = messageData.senderId !== user.uid;
 
 if (isUnread && isFromOthers) {
@@ -352,6 +382,7 @@ if (isUnread && isFromOthers) {
 ```
 
 #### 3. Marking Messages as Read
+
 ```typescript
 // When user opens chat (ChatPage.tsx)
 snapshot.docs.forEach(async (docSnap) => {
@@ -360,7 +391,7 @@ snapshot.docs.forEach(async (docSnap) => {
     const readBy = messageData.readBy || [];
     if (!readBy.includes(user.uid)) {
       await updateDoc(docSnap.ref, {
-        readBy: [...readBy, user.uid]
+        readBy: [...readBy, user.uid],
       });
     }
   }
@@ -368,11 +399,13 @@ snapshot.docs.forEach(async (docSnap) => {
 ```
 
 #### 4. Notification Display
+
 - **Popup Notifications**: Top-right corner, auto-dismiss after 5 seconds
 - **Notification List**: Shows all unread messages filtered by `lastSeen`
 - **Position**: Fixed positioning with z-index for visibility
 
 ### Key Features
+
 - ✅ Only shows notifications for **unread** messages
 - ✅ Prevents duplicate notifications (tracks processed messages)
 - ✅ Skips initial snapshot (doesn't notify for old messages)
@@ -388,6 +421,7 @@ snapshot.docs.forEach(async (docSnap) => {
 **File**: `src/pages/ChatPage.tsx`
 
 ### Chat Structure
+
 ```
 chats/{chatId}/messages/{messageId}
 ```
@@ -397,21 +431,25 @@ chats/{chatId}/messages/{messageId}
 ### Features
 
 #### 1. Real-time Messaging
+
 - Uses Firestore `onSnapshot` for live updates
 - Messages ordered by `timestamp` ascending
 - Auto-scroll to bottom on new messages
 
 #### 2. File Sharing
+
 - Files uploaded to Firebase Storage
 - Stored in `chats/{chatId}/{fileName}`
 - Download URL stored in message document
 
 #### 3. Read Receipts
+
 - `readBy` array tracks who read each message
 - Automatically marked as read when chat is opened
 - Used for notification filtering
 
 #### 4. Message Structure
+
 ```typescript
 {
   senderId: string,
@@ -471,16 +509,19 @@ Session Scheduled
 ### Features
 
 #### 1. Mentor Discovery
+
 - Filter by domain, expertise
 - Search by name
 - Display ratings and availability
 
 #### 2. Time Slot Management
+
 - Mentors set available time slots
 - Stored in `users/{mentorId}/details/availableTimeSlots`
 - Displayed as checkboxes for selection
 
 #### 3. Booking Creation
+
 ```typescript
 await addDoc(collection(db, "bookings"), {
   mentorId: string,
@@ -489,17 +530,19 @@ await addDoc(collection(db, "bookings"), {
   menteeName: string,
   date: Timestamp,
   timeSlot: string,
-  status: "pending"
+  status: "pending",
 });
 ```
 
 #### 4. Rating System
+
 - Mentees can rate mentors after sessions
 - Ratings stored as array: `ratings: [4, 5, 5, 4]`
 - Average calculated: `averageRating = sum(ratings) / length`
 - Displayed as "Most Frequent Rating"
 
 ### Meeting Status Management
+
 - **Ongoing**: Meetings scheduled for today
 - **Attended**: Completed meetings
 - **Missed**: Past meetings not attended
@@ -515,13 +558,14 @@ await addDoc(collection(db, "bookings"), {
 ### Implementation
 
 #### 1. Room Creation
+
 ```typescript
 // Mentor creates room
 const roomId = `mentor-room-${uuidv4()}`;
 await setDoc(doc(db, "videoRooms", roomId), {
   mentorId: user.uid,
   mentorName: user.displayName,
-  createdAt: serverTimestamp()
+  createdAt: serverTimestamp(),
 });
 
 // Navigate to call page
@@ -529,11 +573,13 @@ navigate(`/video-call/${roomId}`);
 ```
 
 #### 2. Jitsi Integration
+
 - Uses `@jitsi/react-sdk`
 - Embedded iframe for video/audio
 - Configurable for video-only or voice-only
 
 #### 3. Room Configuration
+
 ```typescript
 configOverwrite={{
   startWithAudioMuted: true,
@@ -544,6 +590,7 @@ configOverwrite={{
 ```
 
 #### 4. Meeting Tracking
+
 - Room created in `videoRooms` collection
 - Status updated: `ongoing`, `attended`, `missed`
 - Attendance tracked for analytics
@@ -557,6 +604,7 @@ configOverwrite={{
 **File**: `src/pages/DiscussionForumPage.tsx`
 
 ### Structure
+
 ```
 forumTopics/{topicId}
 forumMessages/{topicId}/messages/{messageId}
@@ -565,16 +613,19 @@ forumMessages/{topicId}/messages/{messageId}
 ### Features
 
 #### 1. Topic Management
+
 - Users can create new topics
 - Topics stored in `forumTopics` collection
 - Topic selection filters messages
 
 #### 2. Real-time Messaging
+
 - Messages displayed in real-time using `onSnapshot`
 - Ordered by timestamp
 - Shows sender name and timestamp
 
 #### 3. Toxicity Detection
+
 - Uses Google Perspective API
 - Analyzes message before posting
 - Blocks messages with toxicity score > 0.55
@@ -589,6 +640,7 @@ if (toxicityScore > 0.55) {
 ```
 
 #### 4. Message Structure
+
 ```typescript
 {
   text: string,
@@ -609,21 +661,25 @@ if (toxicityScore > 0.55) {
 ### Features
 
 #### 1. FAQ Management
+
 - Users can add FAQs with question, answer, topic
 - FAQs stored in `faqs` collection
 - Topics auto-created if new
 
 #### 2. Search & Filter
+
 - **Topic Filter**: Dropdown to filter by topic
 - **Keyword Search**: Client-side search in questions/answers
 - Real-time filtering as user types
 
 #### 3. Topic Extraction
+
 - Topics extracted from existing FAQs
 - Merged with `forumTopics` collection
 - Unique topics displayed in dropdown
 
 #### 4. FAQ Structure
+
 ```typescript
 {
   question: string,
@@ -688,24 +744,28 @@ src/
 ## Key Technical Decisions
 
 ### 1. Why Firestore?
+
 - **Real-time updates**: Built-in listeners
 - **NoSQL flexibility**: Easy schema changes
 - **Scalability**: Handles growth automatically
 - **Offline support**: Works offline with sync
 
 ### 2. Why React Context over Redux?
+
 - **Simplicity**: Less boilerplate
 - **Built-in**: No extra dependencies
 - **Sufficient**: App state is manageable
 - **Performance**: Not a bottleneck
 
 ### 3. Why Jitsi Meet?
+
 - **Self-hosted option**: Can be self-hosted
 - **No backend needed**: Peer-to-peer communication
 - **Feature-rich**: Screen sharing, recording, etc.
 - **Free tier**: Good for MVP
 
 ### 4. Why Gemini AI?
+
 - **Free tier**: Generous free usage
 - **Quality**: Good for structured content
 - **Easy integration**: Simple API
@@ -716,12 +776,15 @@ src/
 ## Security Considerations
 
 ### 1. Authentication
+
 - Firebase Auth handles security
 - Protected routes prevent unauthorized access
 - Role-based access control
 
 ### 2. Firestore Rules
+
 - Should implement security rules:
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
@@ -731,7 +794,7 @@ service cloud.firestore {
       allow write: if request.auth.uid == userId;
     }
     match /chats/{chatId} {
-      allow read, write: if request.auth != null && 
+      allow read, write: if request.auth != null &&
         request.auth.uid in resource.data.participants;
     }
   }
@@ -739,6 +802,7 @@ service cloud.firestore {
 ```
 
 ### 3. API Keys
+
 - Stored in environment variables
 - Never committed to repository
 - Use `.env` file (gitignored)
@@ -748,16 +812,19 @@ service cloud.firestore {
 ## Performance Optimizations
 
 ### 1. Real-time Listeners
+
 - Cleanup on unmount prevents memory leaks
 - Limit queries (e.g., `limit(1)` for latest message)
 - Use indexes for complex queries
 
 ### 2. Component Optimization
+
 - React.memo for expensive components
 - useCallback for event handlers
 - Lazy loading for routes
 
 ### 3. Firestore Queries
+
 - Use indexes for compound queries
 - Pagination for large datasets
 - Cache frequently accessed data
@@ -767,6 +834,7 @@ service cloud.firestore {
 ## Future Enhancements
 
 ### Potential Improvements
+
 1. **Push Notifications**: Browser push API for offline notifications
 2. **Message Encryption**: End-to-end encryption for privacy
 3. **Video Recording**: Record sessions for later review
@@ -781,6 +849,7 @@ service cloud.firestore {
 ## Conclusion
 
 MentorConnect is a **modern, scalable platform** built with:
+
 - **React** for interactive UI
 - **Firebase** for backend infrastructure
 - **Real-time** communication throughout
@@ -788,6 +857,7 @@ MentorConnect is a **modern, scalable platform** built with:
 - **Clean architecture** for maintainability
 
 The system is designed to be:
+
 - ✅ **Scalable**: Handles growth
 - ✅ **Real-time**: Live updates everywhere
 - ✅ **User-friendly**: Intuitive interface
@@ -797,7 +867,5 @@ The system is designed to be:
 ---
 
 **Document Version**: 1.0  
-**Last Updated**: 2024  
+**Last Updated**: 2025  
 **Author**: Technical Documentation
-
-
