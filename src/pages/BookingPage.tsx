@@ -4,6 +4,7 @@ import { db } from "@/firebase";
 import { collection, getDocs, query, where, orderBy, doc, addDoc, serverTimestamp, getDoc, updateDoc, Timestamp, onSnapshot, arrayUnion } from "firebase/firestore";
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, User, Search, Star, TrendingUp, Video, CheckCircle, XCircle } from 'lucide-react';
+import { sendBookingEmails } from "@/services/email";
 import { DayPicker } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -297,6 +298,22 @@ export function BookingPage() {
         timeSlot: selectedTime,
         createdAt: serverTimestamp(),
       });
+
+      // Send emails to mentor and mentee
+      try {
+        const bookingDateFormatted = format(selectedDate, "EEEE, MMMM d, yyyy");
+        await sendBookingEmails(
+          selectedMentor.email,
+          selectedMentor.name,
+          user.email || "",
+          user.displayName || "",
+          bookingDateFormatted,
+          selectedTime
+        );
+      } catch (emailError) {
+        console.error("Error sending emails:", emailError);
+        // Continue even if email fails, booking is still saved
+      }
 
       // Send a message to the mentor
       const messagesRef = collection(db, "messages");
