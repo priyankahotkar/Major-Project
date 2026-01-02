@@ -52,6 +52,18 @@ export function Header() {
                 >
                   Roadmap
                 </Link>
+                <Link 
+                  to="/leaderboard" 
+                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Leaderboard
+                </Link>
+                <Link 
+                  to="/progress" 
+                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Progress
+                </Link>
                 <div className="relative group">
                   <button className="flex items-center space-x-2">
                     <img 
