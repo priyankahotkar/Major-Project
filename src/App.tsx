@@ -16,6 +16,7 @@ import { DiscussionForumPage } from "./pages/DiscussionForumPage"; // Import the
 import { FAQPage } from "./pages/FAQPage"; // Import the FAQ page
 import { AboutPage } from "./pages/AboutPage";
 import { RoadmapPage } from "./pages/RoadmapPage";
+import { AIInterviewPage } from "./pages/AIInterviewPage";
 
 // ✅ Private route protection (only for authenticated users)
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -73,6 +74,7 @@ const App: React.FC = () => {
           <Route path="/faq" element={<PrivateRoute><FAQPage /></PrivateRoute>} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/roadmap" element={<PrivateRoute><RoadmapPage /></PrivateRoute>} />
+          <Route path="/ai-interview" element={<PrivateRoute><AIInterviewPage /></PrivateRoute>} />
           </Routes>
         </NotificationProvider>
       </AuthProvider>

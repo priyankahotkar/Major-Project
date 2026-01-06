@@ -147,6 +147,11 @@ export function DashboardPage() {
                     <Calendar className="mr-2 h-5 w-5" /> Generate Roadmap
                   </Button>
                 </Link>
+                <Link to="/ai-interview">
+                  <Button className="w-full justify-start" variant="outline">
+                    <MessageSquare className="mr-2 h-5 w-5" /> AI Interview
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
