@@ -1,6 +1,6 @@
-# BeaconBond
+# CareerMentix
 
-BeaconBond is a free, AI-driven online mentoring platform designed to connect mentees with experienced mentors seamlessly. It integrates automated scheduling, built-in video conferencing, real-time chat, and community discussion forums into a single platform to provide a structured and accessible mentoring experience.
+CareerMentix is a free, AI-driven online mentoring platform designed to connect mentees with experienced mentors seamlessly. It integrates automated scheduling, built-in video conferencing, real-time chat, and community discussion forums into a single platform to provide a structured and accessible mentoring experience.
 
 ## Table of Contents
 
@@ -13,12 +13,12 @@ BeaconBond is a free, AI-driven online mentoring platform designed to connect me
 
 ## Project Overview
 
-**Project Name**: BeaconBond  
+**Project Name**: CareerMentix  
 **Theme**: Education  
 **Team Name**: MentorSync  
 **Event**: ORCHATHON 2K25, organized by N.K. Orchid College of Engineering and Technology, Solapur
 
-BeaconBond aims to eliminate the limitations of existing mentoring platforms by providing a free, all-in-one solution for career guidance, skill development, and professional networking.
+CareerMentix aims to eliminate the limitations of existing mentoring platforms by providing a free, all-in-one solution for career guidance, skill development, and professional networking.
 
 ## Problem Statement
 
@@ -28,7 +28,7 @@ Many existing mentoring platforms suffer from:
 - Lack of integrated scheduling and communication tools (e.g., LinkedIn Mentorship, ADPList)
 - Dependency on third-party tools like Calendly and Zoom, causing inefficiencies
 
-BeaconBond addresses these issues by offering a free platform with automated scheduling, built-in video calls, real-time chat, and secure authentication, ensuring a seamless mentoring experience.
+CareerMentix addresses these issues by offering a free platform with automated scheduling, built-in video calls, real-time chat, and secure authentication, ensuring a seamless mentoring experience.
 
 ## Features
 
@@ -80,7 +80,7 @@ BeaconBond addresses these issues by offering a free platform with automated sch
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/MentorSync/BeaconBond.git
+git clone https://github.com/MentorSync/CareerMentix.git
 ```
 
 2. Install dependencies:

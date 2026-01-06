@@ -67,7 +67,7 @@ export const LandingPage: React.FC = () => {
       <nav className="container mx-auto px-6 py-5 flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Compass className="h-7 w-7 text-primary" />
-          <span className="text-2xl font-bold">BeaconBond</span>
+          <span className="text-2xl font-bold">CareerMentix</span>
         </div>
         <div className="hidden md:flex space-x-6 font-medium">
           <Button variant="ghost" onClick={() => navigate('/about')}>About</Button>

@@ -1,4 +1,4 @@
-# MentorConnect (BeaconBond) - Complete Technical Documentation
+# MentorConnect (CareerMentix) - Complete Technical Documentation
 
 ## Table of Contents
 

@@ -15,7 +15,7 @@ export function Footer() {
                 <GraduationCap className="w-7 h-7 text-blue-600" aria-label="MentorConnect Logo" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                BeaconBond
+                CareerMentix
               </span>
             </Link>
             <p className="text-gray-600 text-sm">
@@ -123,8 +123,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:support@beaconbond.com" className="text-gray-600 hover:text-blue-600 transition-colors">
-                  support@beaconbond.com
+                <a href="mailto:support@CareerMentix.com" className="text-gray-600 hover:text-blue-600 transition-colors">
+                  support@CareerMentix.com
                 </a>
               </li>
             </ul>
@@ -135,7 +135,7 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-gray-200">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-500 text-sm">
-              © {currentYear} BeaconBond. All rights reserved.
+              © {currentYear} CareerMentix. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link to="/privacy" className="text-gray-500 hover:text-gray-900 text-sm">

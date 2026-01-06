@@ -15,7 +15,7 @@ export function Header() {
               <GraduationCap className="w-7 h-7 text-blue-600" aria-label="MentorConnect Logo" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              BeaconBond
+              CareerMentix
             </span>
           </Link>
 
