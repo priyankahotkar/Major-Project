@@ -35,6 +35,27 @@ interface CodeforcesUserData {
   solvedProblems: number;
 }
 
+export type InterviewStage =
+  | 'introduction'
+  | 'technical'
+  | 'coding'
+  | 'behavioral'
+  | 'summary';
+
+export interface InterviewTurn {
+  stage: InterviewStage;
+  question: string;
+  userAnswer: string;
+  feedback: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface InterviewState {
+  stage: InterviewStage;
+  difficulty: 'easy' | 'medium' | 'hard';
+  turns: InterviewTurn[];
+}
+
 export class GeminiService {
   private model: any;
 
@@ -190,5 +211,114 @@ Format the response in markdown with clear sections and subsections.`;
       console.error('Error generating roadmap:', error);
       throw error;
     }
+  }
+
+  /**
+   * Drive one step of an AI interview.
+   * The frontend owns the state machine; this method just returns the next interviewer message
+   * and optionally the final summary, based on the current interview state and the latest answer.
+   */
+  async generateInterviewStep(params: {
+    state: InterviewState;
+    lastUserAnswer: string;
+    targetRole: string;
+    preferredLanguage?: string;
+  }): Promise<{
+    interviewerMessage: string;
+    nextStage: InterviewStage;
+    nextDifficulty: 'easy' | 'medium' | 'hard';
+    isFinal: boolean;
+    summaryMarkdown?: string;
+  }> {
+    const { state, lastUserAnswer, targetRole, preferredLanguage = 'Java' } = params;
+
+    const turnsSummary = state.turns
+      .map(
+        (t, index) =>
+          `Turn ${index + 1} [${t.stage} | ${t.difficulty}] 
+Interviewer: ${t.question}
+Candidate: ${t.userAnswer}
+Feedback: ${t.feedback}`
+      )
+      .join('\n\n');
+
+    const systemPrompt = `You are a senior software engineering interviewer at a top tech company.
+- Conduct a structured interview with stages: introduction, technical (OOP, OS, DBMS, CN), coding (${preferredLanguage}), behavioral, then a summary.
+- Ask ONE question at a time in a short, clear way.
+- After each user answer, briefly (2-4 sentences) explain if it is correct / partially correct / wrong, and suggest how to improve.
+- Then either ask the next, slightly harder or easier question depending on their performance, or finish if the interview is complete.
+- Difficulty must adapt: good answers -> harder, weak answers -> easier/clarifying.
+- Java should be the default language for coding questions.
+- Do NOT include any code execution results, only plain text.
+- When summary stage is reached, do NOT ask more questions. Instead, produce a compact evaluation report in markdown with:
+  - Score out of 10
+  - Strengths
+  - Weak areas
+  - Topics to improve
+  - Hiring recommendation (e.g., Strong Hire / Hire / Weak Hire / No Hire).
+Format:
+- For normal stages: start with FEEDBACK: ... then QUESTION: ...
+- For final summary: start with SUMMARY_REPORT_MARKDOWN: then the markdown report only.`;
+
+    const stageContext = `Current stage: ${state.stage}
+Current difficulty: ${state.difficulty}
+Target role: ${targetRole}
+Preferred coding language: ${preferredLanguage}
+
+Conversation so far (if any):
+${turnsSummary || 'No previous turns yet.'}
+
+Most recent candidate answer (may be empty for the very first question):
+${lastUserAnswer || 'No answer yet (this is the first question).'} 
+`;
+
+    const prompt = `${systemPrompt}
+
+Now generate the next step based on the current stage and answer.
+Remember: ONE question at a time, and keep responses concise.
+
+${stageContext}`;
+
+    const result = await this.model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // Simple parsing heuristic
+    if (text.trim().startsWith('SUMMARY_REPORT_MARKDOWN:')) {
+      const summaryMarkdown = text.replace('SUMMARY_REPORT_MARKDOWN:', '').trim();
+      return {
+        interviewerMessage: 'Thank you for completing the interview. Here is your report:',
+        nextStage: 'summary',
+        nextDifficulty: state.difficulty,
+        isFinal: true,
+        summaryMarkdown,
+      };
+    }
+
+    const feedbackMatch = text.match(/FEEDBACK:(.*?)(QUESTION:|$)/s);
+    const questionMatch = text.match(/QUESTION:(.*)$/s);
+
+    const feedback = feedbackMatch ? feedbackMatch[1].trim() : '';
+    const interviewerQuestion = questionMatch ? questionMatch[1].trim() : text.trim();
+
+    // Very lightweight difficulty / stage update; frontend can further refine logic if needed
+    let nextDifficulty = state.difficulty;
+    const positiveSignals = ['good', 'correct', 'great', 'excellent'];
+    const negativeSignals = ['incorrect', 'wrong', 'missing', 'weak', 'incomplete'];
+    const lowerFeedback = feedback.toLowerCase();
+
+    if (positiveSignals.some((w) => lowerFeedback.includes(w))) {
+      nextDifficulty = state.difficulty === 'easy' ? 'medium' : 'hard';
+    } else if (negativeSignals.some((w) => lowerFeedback.includes(w))) {
+      nextDifficulty = state.difficulty === 'hard' ? 'medium' : 'easy';
+    }
+
+    // Stage transitions are managed by the frontend; we just echo current stage
+    return {
+      interviewerMessage: text.trim(),
+      nextStage: state.stage,
+      nextDifficulty,
+      isFinal: false,
+    };
   }
 }
