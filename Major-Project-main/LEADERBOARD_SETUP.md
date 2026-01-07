@@ -52,3 +52,4 @@ The leaderboard tracks attendance from:
 - Rankings are based on attendance rate (percentage), then by number of attended sessions
 - User data is fetched from the `users` collection in Firestore
 
+

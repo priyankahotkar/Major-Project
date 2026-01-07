@@ -65,3 +65,4 @@ A "Progress" link has been added to the Header navigation menu, accessible to al
 - Both mentees and mentors can view their own progress and compare with others
 - The "All Users" view shows a ranked list of the most active users
 
+
