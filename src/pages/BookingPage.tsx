@@ -4,13 +4,14 @@ import { db } from "@/firebase";
 import { collection, getDocs, query, where, orderBy, doc, addDoc, serverTimestamp, getDoc, updateDoc, Timestamp, onSnapshot, arrayUnion } from "firebase/firestore";
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, User, Search, Star, TrendingUp, Video, CheckCircle, XCircle } from 'lucide-react';
-import { sendBookingEmails } from "@/services/email";
 import { DayPicker } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardTitle, CardContent } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { sendBookingEmails } from '@/services/email';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Mentor {
   id: string;
@@ -281,12 +282,18 @@ export function BookingPage() {
     fetchMentorTimeSlots();
   }, [selectedMentor]);
 
+  const { showNotification } = useNotification();
+
   const handleBooking = async () => {
     if (!selectedMentor || !selectedDate || !selectedTime || !user) return;
 
     setLoading(true);
 
     try {
+      console.log('[BOOKING] Starting booking process...');
+      console.log('[BOOKING] Mentor email:', selectedMentor.email);
+      console.log('[BOOKING] User email:', user.email);
+      
       // Save booking details to Firestore
       const bookingRef = collection(db, "bookings");
       await addDoc(bookingRef, {
@@ -299,20 +306,34 @@ export function BookingPage() {
         createdAt: serverTimestamp(),
       });
 
-      // Send emails to mentor and mentee
+      console.log('[BOOKING] Booking saved to Firestore. Now sending emails...');
+
+      // Generate a meeting link for the session
+      const meetingLink = `${window.location.origin}/video-call/${selectedMentor.id}-${user.uid}`;
+      
+      // Send emails to both mentor and mentee using Brevo
       try {
-        const bookingDateFormatted = format(selectedDate, "EEEE, MMMM d, yyyy");
+        console.log('[BOOKING] Calling sendBookingEmails...');
         await sendBookingEmails(
           selectedMentor.email,
           selectedMentor.name,
-          user.email || "",
-          user.displayName || "",
-          bookingDateFormatted,
-          selectedTime
+          user.email || '',
+          user.displayName || 'Mentee',
+          format(selectedDate, 'MMMM dd, yyyy'),
+          selectedTime,
+          meetingLink
         );
-      } catch (emailError) {
+        console.log("Emails sent successfully to both mentor and mentee");
+        showNotification({
+          title: 'Success',
+          message: 'Session booked! Confirmation emails sent.',
+        });
+      } catch (emailError: any) {
         console.error("Error sending emails:", emailError);
-        // Continue even if email fails, booking is still saved
+        showNotification({
+          title: 'Warning',
+          message: 'Session booked, but emails failed. Check console for details.',
+        });
       }
 
       // Send a message to the mentor
