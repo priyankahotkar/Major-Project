@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
+import { brevoEmailProxy } from "./emailProxy";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -18,9 +19,18 @@ interface BookingData {
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    user: process.env.EMAIL_USER || "", // fallback to env variable
+    pass: process.env.EMAIL_PASSWORD || "", // fallback to env variable
   },
+});
+
+// Verify transporter configuration at startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("Email transporter verification failed:", error);
+  } else {
+    console.log("Email transporter verified successfully");
+  }
 });
 
 // Function to send booking confirmation emails
@@ -33,21 +43,44 @@ export const sendBookingEmail = functions.firestore
       return;
     }
 
+    console.log("Processing booking:", bookingData);
+
     try {
-      // Get mentor details
+      // Fetch mentor details from Firestore
       const mentorRef = db.collection("users").doc(bookingData.mentorId);
       const mentorSnap = await mentorRef.get();
-      const mentorEmail = mentorSnap.data()?.email;
-
-      // Get mentee details
-      const menteeRef = db.collection("users").doc(bookingData.menteeId);
-      const menteeSnap = await menteeRef.get();
-      const menteeEmail = menteeSnap.data()?.email;
-
-      if (!mentorEmail || !menteeEmail) {
-        console.error("Email addresses not found for mentor or mentee");
+      
+      if (!mentorSnap.exists()) {
+        console.error(`Mentor not found with ID: ${bookingData.mentorId}`);
         return;
       }
+      
+      const mentorData = mentorSnap.data();
+      const mentorEmail = mentorData?.email;
+
+      if (!mentorEmail) {
+        console.error(`Mentor email not found for ID: ${bookingData.mentorId}`);
+        return;
+      }
+
+      // Fetch mentee details from Firestore
+      const menteeRef = db.collection("users").doc(bookingData.menteeId);
+      const menteeSnap = await menteeRef.get();
+      
+      if (!menteeSnap.exists()) {
+        console.error(`Mentee not found with ID: ${bookingData.menteeId}`);
+        return;
+      }
+      
+      const menteeData = menteeSnap.data();
+      const menteeEmail = menteeData?.email;
+
+      if (!menteeEmail) {
+        console.error(`Mentee email not found for ID: ${bookingData.menteeId}`);
+        return;
+      }
+
+      console.log(`Sending emails to mentor: ${mentorEmail}, mentee: ${menteeEmail}`);
 
       const bookingDate = new Date(bookingData.date).toLocaleDateString("en-US", {
         weekday: "long",
@@ -70,6 +103,7 @@ export const sendBookingEmail = functions.firestore
             <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="margin-top: 0; color: #333;">Session Details:</h3>
               <p><strong>Mentee Name:</strong> ${bookingData.menteeName}</p>
+              <p><strong>Mentee Email:</strong> ${menteeEmail}</p>
               <p><strong>Date:</strong> ${bookingDate}</p>
               <p><strong>Time:</strong> ${bookingData.timeSlot}</p>
             </div>
@@ -94,6 +128,7 @@ export const sendBookingEmail = functions.firestore
             <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="margin-top: 0; color: #333;">Session Details:</h3>
               <p><strong>Mentor Name:</strong> ${bookingData.mentorName}</p>
+              <p><strong>Mentor Email:</strong> ${mentorEmail}</p>
               <p><strong>Date:</strong> ${bookingDate}</p>
               <p><strong>Time:</strong> ${bookingData.timeSlot}</p>
             </div>
@@ -105,13 +140,26 @@ export const sendBookingEmail = functions.firestore
       };
 
       // Send both emails
-      await transporter.sendMail(mentorMailOptions);
-      console.log("Email sent to mentor:", mentorEmail);
+      try {
+        await transporter.sendMail(mentorMailOptions);
+        console.log("Email sent to mentor:", mentorEmail);
+      } catch (error) {
+        console.error("Error sending email to mentor:", error);
+        throw error;
+      }
 
-      await transporter.sendMail(menteeMailOptions);
-      console.log("Email sent to mentee:", menteeEmail);
+      try {
+        await transporter.sendMail(menteeMailOptions);
+        console.log("Email sent to mentee:", menteeEmail);
+      } catch (error) {
+        console.error("Error sending email to mentee:", error);
+        throw error;
+      }
     } catch (error) {
-      console.error("Error sending email:", error);
+      console.error("Error in sendBookingEmail function:", error);
       throw error;
     }
   });
+
+// Export the Brevo email proxy function
+export { brevoEmailProxy };
