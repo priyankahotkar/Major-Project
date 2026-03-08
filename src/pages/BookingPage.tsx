@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/firebase";
 import { collection, getDocs, query, where, orderBy, doc, addDoc, serverTimestamp, getDoc, updateDoc, Timestamp, onSnapshot, arrayUnion } from "firebase/firestore";
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Clock, User, Search, Star, TrendingUp, Video, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Search, Star, TrendingUp, Video, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -118,6 +118,9 @@ export function BookingPage() {
   const [ongoingMeetings, setOngoingMeetings] = useState<Meeting[]>([]);
   const [mentorTimeSlots, setMentorTimeSlots] = useState<string[]>([]); // Add state for mentor's time slots
   const [, setAttendedMeetings] = useState<Meeting[]>([]); // Add state for attended meetings
+  const [expandedOngoing, setExpandedOngoing] = useState(false);
+  const [expandedAttended, setExpandedAttended] = useState(false);
+  const [expandedMissed, setExpandedMissed] = useState(false);
 
   // Fetch mentors from Firestore
   useEffect(() => {
@@ -526,11 +529,23 @@ export function BookingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Ongoing Meetings */}
           <Card className="border-2 border-blue-200">
-            <CardTitle className="flex items-center gap-2 text-blue-600">
-              <Video className="w-5 h-5" />
-              Ongoing Meetings
-            </CardTitle>
-            <CardContent>
+            <div className="flex items-center justify-between pr-6 pt-6">
+              <CardTitle className="flex items-center gap-2 text-blue-600 m-0">
+                <Video className="w-5 h-5" />
+                Ongoing Meetings
+              </CardTitle>
+              <button
+                onClick={() => setExpandedOngoing(!expandedOngoing)}
+                className="p-1 hover:bg-blue-100 rounded transition-colors"
+              >
+                {expandedOngoing ? (
+                  <ChevronUp className="w-5 h-5 text-blue-600" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-blue-600" />
+                )}
+              </button>
+            </div>
+            <CardContent className={`overflow-hidden transition-all duration-300 ${expandedOngoing ? 'max-h-[1000px]' : 'max-h-[200px]'}`}>
               {ongoingMeetingsFiltered.length > 0 ? (
                 <div className="space-y-3">
                   {ongoingMeetingsFiltered.map((meeting) => (
@@ -558,11 +573,23 @@ export function BookingPage() {
 
           {/* Attended Meetings */}
           <Card className="border-2 border-green-200">
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="w-5 h-5" />
-              Attended Meetings
-            </CardTitle>
-            <CardContent>
+            <div className="flex items-center justify-between pr-6 pt-6">
+              <CardTitle className="flex items-center gap-2 text-green-600 m-0">
+                <CheckCircle className="w-5 h-5" />
+                Attended Meetings
+              </CardTitle>
+              <button
+                onClick={() => setExpandedAttended(!expandedAttended)}
+                className="p-1 hover:bg-green-100 rounded transition-colors"
+              >
+                {expandedAttended ? (
+                  <ChevronUp className="w-5 h-5 text-green-600" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-green-600" />
+                )}
+              </button>
+            </div>
+            <CardContent className={`overflow-hidden transition-all duration-300 ${expandedAttended ? 'max-h-[1000px]' : 'max-h-[200px]'}`}>
               {attendedMeetingsFiltered.length > 0 ? (
                 <div className="space-y-3">
                   {attendedMeetingsFiltered.map((meeting) => (
@@ -580,11 +607,23 @@ export function BookingPage() {
 
           {/* Missed Meetings */}
           <Card className="border-2 border-red-200">
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <XCircle className="w-5 h-5" />
-              Missed Meetings
-            </CardTitle>
-            <CardContent>
+            <div className="flex items-center justify-between pr-6 pt-6">
+              <CardTitle className="flex items-center gap-2 text-red-600 m-0">
+                <XCircle className="w-5 h-5" />
+                Missed Meetings
+              </CardTitle>
+              <button
+                onClick={() => setExpandedMissed(!expandedMissed)}
+                className="p-1 hover:bg-red-100 rounded transition-colors"
+              >
+                {expandedMissed ? (
+                  <ChevronUp className="w-5 h-5 text-red-600" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-red-600" />
+                )}
+              </button>
+            </div>
+            <CardContent className={`overflow-hidden transition-all duration-300 ${expandedMissed ? 'max-h-[1000px]' : 'max-h-[200px]'}`}>
               {missedMeetings.length > 0 ? (
                 <div className="space-y-3">
                   {missedMeetings.map((meeting) => (
