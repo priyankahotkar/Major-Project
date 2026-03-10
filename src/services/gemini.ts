@@ -160,6 +160,14 @@ export class GeminiService {
     duration: string;
   }): Promise<string> {
     try {
+      const duration = (userInfo.duration || '').toLowerCase();
+      let totalWeeks = 12;
+
+      if (duration.includes('1 month')) totalWeeks = 4;
+      else if (duration.includes('3 month')) totalWeeks = 12;
+      else if (duration.includes('6 month')) totalWeeks = 24;
+      else if (duration.includes('1 year')) totalWeeks = 52;
+
       // Fetch data from all platforms
       const [githubData, leetcodeData, codeforcesData] = await Promise.all([
         this.fetchGithubData(userInfo.githubUsername),
@@ -191,18 +199,32 @@ Codeforces Profile:
 User Goals:
 - ${userInfo.goal}
 - Desired Duration: ${userInfo.duration}
+- Total Weeks (approx): ${totalWeeks}
 
-Based on this data, create a detailed learning roadmap that includes:
-1. Assessment of current skills and areas for improvement
-2. Weekly breakdown of tasks and learning objectives
-3. Recommended practice problems (from LeetCode/Codeforces) matching their current level
-4. Project suggestions based on their GitHub activity and interests
-5. Resources and learning materials
-6. Milestones and progress tracking metrics
-7. Tips for improving contest performance
-8. Suggested open-source contribution opportunities
+Based on this data, create a detailed learning roadmap that focuses on concrete weekly plans:
 
-Format the response in markdown with clear sections and subsections.`;
+1. Start with a **very short overall assessment paragraph** (3–5 sentences max). Do NOT put this assessment under any "Week N" heading.
+
+2. Then provide a **weekly breakdown of tasks and learning objectives for exactly ${totalWeeks} weeks**.
+   - Use markdown headings in this exact form so they are easy to parse:
+     - "Week 1 - short title"
+     - "Week 2 - short title"
+     - ...
+     - "Week ${totalWeeks} - short title"
+   - Under each week heading, include:
+     - One short objective sentence.
+     - A bullet list (\`- \`) of 3–7 specific, actionable tasks for that week.
+   - Do NOT create any extra weeks, empty weeks, or placeholder weeks like "Week 3 ---".
+
+3. After the weekly plan, you may add additional sections (outside of any "Week N" heading) for:
+   - Recommended practice problems (from LeetCode/Codeforces) matching their current level.
+   - Project suggestions based on their GitHub activity and interests.
+   - Resources and learning materials.
+   - Milestones and progress tracking metrics.
+   - Tips for improving contest performance.
+   - Suggested open-source contribution opportunities.
+
+Format the response in markdown with clear sections and subsections, and make sure every weekly plan section starts with "Week N - " as described above so it can be easily parsed.`;
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
