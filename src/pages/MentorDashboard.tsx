@@ -7,7 +7,7 @@ import { MessageSquare, Video, LogOut, PlusCircle, Sun, Moon } from 'lucide-reac
 import { v4 as uuidv4 } from 'uuid';
 import { doc, setDoc, collection, query, where, orderBy, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
-import Notifications from "@/components/Notifications";
+import MentorSessionNotifications from "@/components/MentorSessionNotifications";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
@@ -21,7 +21,7 @@ interface Mentee {
 interface Session {
   id: string;
   menteeName: string;
-  date: string;
+  date: Date;
   timeSlot: string;
 }
 
@@ -32,6 +32,14 @@ export function MentorDashboardPage() {
   const [mentees, setMentees] = useState<Mentee[]>([]);
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const navigate = useNavigate();
+
+  const isSameDay = (a: Date, b: Date) => {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  };
 
   // Fetch booked sessions for the mentor
   useEffect(() => {
@@ -47,21 +55,33 @@ export function MentorDashboardPage() {
         );
         const snapshot = await getDocs(q);
 
-        const sessionsList = snapshot.docs.map((doc) => {
+        const sessionsList: Session[] = snapshot.docs.map((doc) => {
           const data = doc.data();
-          const date =
+          const dateValue =
             data.date?.toDate?.() || // If it's a Firestore Timestamp, convert to Date
             new Date(data.date); // If it's a string, convert to Date
+
+          const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
 
           return {
             id: doc.id,
             menteeName: data.menteeName,
-            date: date.toLocaleString(), // Convert Date to readable string
+            date,
             timeSlot: data.timeSlot,
           };
-        }) as Session[];
+        });
 
-        setBookedSessions(sessionsList);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Hide sessions with date < current date on mentor dashboard
+        const upcomingSessions = sessionsList.filter((session) => {
+          const sessionDate = new Date(session.date);
+          sessionDate.setHours(0, 0, 0, 0);
+          return sessionDate >= today;
+        });
+
+        setBookedSessions(upcomingSessions);
       } catch (error) {
         console.error("Error fetching booked sessions for mentor:", error);
       }
@@ -203,10 +223,10 @@ export function MentorDashboardPage() {
           </div>
           {/* Main Content Sections */}
           <div className="col-span-2 space-y-8">
-            {/* Notifications */}
+            {/* Notifications - new session bookings for this mentor */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <h2 className="text-2xl font-extrabold mb-4 text-primary">Notifications</h2>
-              <Notifications />
+              <MentorSessionNotifications />
             </div>
             {/* Booked Sessions */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -216,8 +236,21 @@ export function MentorDashboardPage() {
                   {bookedSessions.map((session) => (
                     <li key={session.id} className="p-4 bg-blue-50 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between shadow border-b">
                       <span className="font-semibold">Mentee: {session.menteeName}</span>
-                      <span>Date: {session.date}</span>
+                      <span>
+                        Date: {session.date.toLocaleDateString()}{" "}
+                        {session.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
                       <span>Time Slot: {session.timeSlot}</span>
+                      {isSameDay(session.date, new Date()) && (
+                        <Button
+                          className="mt-2 md:mt-0 bg-blue-600 text-white"
+                          size="sm"
+                          onClick={generateJitsiRoom}
+                        >
+                          <Video className="mr-1 h-4 w-4" />
+                          Start Session
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>
