@@ -1,10 +1,23 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
+  const getLinkClass = (path: string) => {
+    const baseClass = "transition-colors";
+    if (isActive(path)) {
+      return `${baseClass} text-blue-600 font-semibold text-lg`;
+    }
+    return `${baseClass} text-gray-600 hover:text-blue-600`;
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -24,39 +37,51 @@ export function Header() {
               <>
                 <Link 
                   to="/dashboard" 
-                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                  className={getLinkClass("/dashboard")}
                 >
                   Dashboard
                 </Link>
                 <Link 
                   to="/booking" 
-                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                  className={getLinkClass("/booking")}
                 >
                   Book Session
                 </Link>
                 <Link 
                   to="/chat" 
-                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                  className={getLinkClass("/chat")}
                 >
                   Messages
                 </Link>
                 <Link 
                   to="/discussion-forum" 
-                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                  className={getLinkClass("/discussion-forum")}
                 >
                   Forum
                 </Link>
                 <Link 
                   to="/roadmap" 
-                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                  className={getLinkClass("/roadmap")}
                 >
                   Roadmap
                 </Link>
                 <Link 
                   to="/ai-interview" 
-                  className="text-gray-600 hover:text-blue-600 transition-colors"
+                  className={getLinkClass("/ai-interview")}
                 >
                   AI Interview
+                </Link>
+                <Link 
+                  to="/leaderboard" 
+                  className={getLinkClass("/leaderboard")}
+                >
+                  Leaderboard
+                </Link>
+                <Link 
+                  to="/progress" 
+                  className={getLinkClass("/progress")}
+                >
+                  Progress
                 </Link>
                 <div className="relative group">
                   <button className="flex items-center space-x-2">
