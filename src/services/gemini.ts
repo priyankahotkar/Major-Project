@@ -224,7 +224,30 @@ Based on this data, create a detailed learning roadmap that focuses on concrete 
    - Tips for improving contest performance.
    - Suggested open-source contribution opportunities.
 
-Format the response in markdown with clear sections and subsections, and make sure every weekly plan section starts with "Week N - " as described above so it can be easily parsed.`;
+Format the response in markdown with clear sections and subsections, and make sure every weekly plan section starts with "Week N - " as described above so it can be easily parsed.
+
+Example output format (for a 2-week plan example only; you must output ${totalWeeks} weeks for the real user):
+
+### Overall Assessment
+You have a solid foundation in programming basics. Your next gains will come from consistent problem-solving and one portfolio project. Focus on building habits and tightening fundamentals before pushing difficulty.
+
+## Weekly Plan
+
+### Week 1 - Foundations & Routine
+Objective: Build a daily routine and refresh core basics.
+- Do 5 easy problems on arrays/strings.
+- Review time/space complexity basics.
+- Set up a GitHub repo for your learning notes.
+
+### Week 2 - Problem Solving & Patterns
+Objective: Learn common patterns and apply them consistently.
+- Do 5 easy + 2 medium problems using two pointers / sliding window.
+- Write notes: pattern, when to use, and pitfalls for each problem.
+- Refactor one past solution for readability.
+
+## Resources
+- (Add resource links / titles here)
+`;
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
