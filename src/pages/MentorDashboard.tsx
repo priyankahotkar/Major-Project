@@ -30,7 +30,6 @@ export function MentorDashboardPage() {
   const [jitsiRoom, setJitsiRoom] = useState<string | null>(null);
   const [bookedSessions, setBookedSessions] = useState<Session[]>([]);
   const [mentees, setMentees] = useState<Mentee[]>([]);
-  const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const isSameDay = (a: Date, b: Date) => {
@@ -123,46 +122,6 @@ export function MentorDashboardPage() {
 
     fetchMentees();
   }, [user]);
-
-  useEffect(() => {
-    const fetchTimeSlots = async () => {
-      if (!user) return;
-
-      try {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setTimeSlots(userSnap.data().availableTimeSlots || []);
-        }
-      } catch (error) {
-        console.error("Error fetching time slots:", error);
-      }
-    };
-
-    fetchTimeSlots();
-  }, [user]);
-
-  const handleTimeSlotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
-    if (checked) {
-      setTimeSlots([...timeSlots, value]);
-    } else {
-      setTimeSlots(timeSlots.filter((slot) => slot !== value));
-    }
-  };
-
-  const updateTimeSlots = async () => {
-    if (!user) return;
-
-    try {
-      const userRef = doc(db, "users", user.uid);
-      await setDoc(userRef, { availableTimeSlots: timeSlots }, { merge: true }); // Save updated time slots
-      alert("Time slots updated successfully!");
-    } catch (error) {
-      console.error("Error updating time slots:", error);
-      alert("Failed to update time slots. Please try again.");
-    }
-  };
 
   const generateJitsiRoom = async () => {
     if (!user) {
@@ -286,27 +245,6 @@ export function MentorDashboardPage() {
                   <p className="text-gray-500">No mentees found</p>
                 )}
               </div>
-            </div>
-            {/* Time Slots */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-2xl font-extrabold mb-4 text-primary">Update Available Time Slots</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-                {["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"].map((slot) => (
-                  <label key={slot} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      value={slot}
-                      checked={timeSlots.includes(slot)}
-                      onChange={handleTimeSlotChange}
-                      className="form-checkbox"
-                    />
-                    <span>{slot}</span>
-                  </label>
-                ))}
-              </div>
-              <Button onClick={updateTimeSlots} className="bg-blue-500 text-white">
-                Update Time Slots
-              </Button>
             </div>
           </div>
         </div>

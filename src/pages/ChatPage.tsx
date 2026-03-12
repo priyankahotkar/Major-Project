@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Send, Video, Phone, MessageSquare, Paperclip, Users, Hash } from "lucide-react";
+import { Send, Video, Phone, MessageSquare, Paperclip, Users, Hash, Search, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -36,15 +36,41 @@ interface User {
   name: string;
   email: string;
   photoURL: string;
+  role?: string;
   lastMessageTimestamp?: any;
+  lastMessage?: string;
+  unreadCount?: number;
 }
 
 export function ChatPage() {
+  // Format timestamp like WhatsApp
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp.toDate());
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (msgDate.getTime() === today.getTime()) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } else if (msgDate.getTime() === yesterday.getTime()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+  };
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [user] = useAuthState(auth);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -53,14 +79,14 @@ export function ChatPage() {
     const fetchUsersWithLastMessages = async () => {
       if (!user) return;
       
-      // First, fetch all users
+      // Fetch all users
       const usersRef = collection(db, "users");
       const snapshot = await getDocs(usersRef);
       const usersList = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() } as User))
         .filter((u) => u.id !== user?.uid);
 
-      // For each user, get their last message timestamp
+      // For each user, get their last message timestamp and unread count
       const usersWithTimestamp = await Promise.all(
         usersList.map(async (u) => {
           const chatId = user.uid < u.id
@@ -72,9 +98,28 @@ export function ChatPage() {
           const messageSnap = await getDocs(q);
           
           const lastMessage = messageSnap.docs[0]?.data();
+          
+          // Get all messages and count unread
+          const allMessagesSnap = await getDocs(
+            collection(db, "chats", chatId, "messages")
+          );
+          let unreadCount = 0;
+          allMessagesSnap.docs.forEach((docSnap) => {
+            const msgData = docSnap.data();
+            // Count messages from other user that current user hasn't read
+            if (msgData.senderId !== user.uid) {
+              const readBy = msgData.readBy || [];
+              if (!readBy.includes(user.uid)) {
+                unreadCount++;
+              }
+            }
+          });
+
           return {
             ...u,
-            lastMessageTimestamp: lastMessage?.timestamp || null
+            lastMessageTimestamp: lastMessage?.timestamp || null,
+            lastMessage: lastMessage?.text || "",
+            unreadCount: unreadCount,
           };
         })
       );
@@ -88,6 +133,7 @@ export function ChatPage() {
       });
 
       setUsers(sortedUsers);
+      setFilteredUsers(sortedUsers);
     };
 
     fetchUsersWithLastMessages();
@@ -102,6 +148,27 @@ export function ChatPage() {
 
     return () => unsubscribeChats();
   }, [user]);
+
+  // Filter users based on search query and role filter
+  useEffect(() => {
+    let filtered = users;
+
+    // Apply role filter
+    if (roleFilter) {
+      filtered = filtered.filter((u) => u.role === roleFilter);
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((u) =>
+        u.name?.toLowerCase().includes(query) ||
+        u.email?.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredUsers(filtered);
+  }, [searchQuery, users, roleFilter]);
 
   // Fetch previous messages and listen for new messages in real-time
   useEffect(() => {
@@ -177,12 +244,23 @@ export function ChatPage() {
     await addDoc(messagesRef, {
       text: newMessage,
       senderId: user.uid,
-      participants: [user.uid, selectedUser.id], // Add participants to the message
+      participants: [user.uid, selectedUser.id],
       timestamp: serverTimestamp(),
-      readBy: [user.uid], // Sender's own messages are always read
+      readBy: [user.uid],
     });
 
     setNewMessage("");
+    setIsTyping(false);
+  };
+
+  // Handle typing indicator
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    if (e.target.value.length > 0 && !isTyping) {
+      setIsTyping(true);
+    } else if (e.target.value.length === 0 && isTyping) {
+      setIsTyping(false);
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -221,48 +299,123 @@ export function ChatPage() {
       <Header />
       <div className="flex h-[calc(100vh-4rem)] pt-16">
         {/* Sidebar: User List */}
-        <div className="w-1/3 md:w-1/4 bg-white border-r border-gray-200 shadow-sm">
+        <div className="w-1/3 md:w-1/4 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+          {/* Header with icon */}
           <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-4">
               <MessageSquare className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-800">Messages</h2>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Messages</h2>
+                <p className="text-xs text-gray-500">{filteredUsers.length} conversations</p>
+              </div>
             </div>
-            <p className="text-sm text-gray-600">{users.length} conversations</p>
+            
+            {/* Search Bar */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Role Filter Tags */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRoleFilter(null)}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  roleFilter === null
+                    ? "bg-gray-900 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setRoleFilter("mentee")}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  roleFilter === "mentee"
+                    ? "bg-blue-600 text-white"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                }`}
+              >
+                Mentee
+              </button>
+              <button
+                onClick={() => setRoleFilter("mentor")}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  roleFilter === "mentor"
+                    ? "bg-purple-600 text-white"
+                    : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                }`}
+              >
+                Mentor
+              </button>
+            </div>
           </div>
-          <div className="overflow-y-auto h-[calc(100vh-13rem)]">
-            {users.length > 0 ? (
+
+          {/* User List */}
+          <div className="overflow-y-auto flex-1">
+            {filteredUsers.length > 0 ? (
               <ul className="p-2">
-                {users.map((u) => (
+                {filteredUsers.map((u) => (
                   <li
                     key={u.id}
                     className={`p-3 flex items-center gap-3 cursor-pointer rounded-lg mb-1 transition-all ${
                       selectedUser?.id === u.id 
-                        ? "bg-blue-500 text-white shadow-md" 
+                        ? "bg-blue-100" 
                         : "hover:bg-gray-100"
                     }`}
                     onClick={() => setSelectedUser(u)}
                   >
-                    <Avatar className="w-12 h-12">
+                    <Avatar className="w-10 h-10 flex-shrink-0">
                       <AvatarImage src={u.photoURL} alt={u.name || 'User'} />
                       <AvatarFallback className={selectedUser?.id === u.id ? "bg-blue-400" : "bg-gray-300"}>
                         {u.name?.[0] || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold truncate">{u.name || 'Unknown User'}</div>
-                      {u.lastMessageTimestamp && (
-                        <div className={`text-xs mt-0.5 ${selectedUser?.id === u.id ? "text-blue-100" : "text-gray-500"}`}>
-                          {new Date(u.lastMessageTimestamp.toDate()).toLocaleString()}
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-800 truncate text-sm">{u.name || 'Unknown User'}</span>
+                        {/* WhatsApp style timestamp */}
+                        {u.lastMessageTimestamp && (
+                          <span className={`text-xs whitespace-nowrap ml-2 ${selectedUser?.id === u.id ? "text-blue-700" : "text-gray-500"}`}>
+                            {formatTimestamp(u.lastMessageTimestamp)}
+                          </span>
+                        )}
+                      </div>
+                      {/* Last Message Preview */}
+                      {u.lastMessage && (
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{u.lastMessage}</p>
                       )}
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                <Users className="w-16 h-16 mb-2 opacity-50" />
-                <p>No conversations yet</p>
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
+                {searchQuery ? (
+                  <>
+                    <Search className="w-12 h-12 mb-2 opacity-30" />
+                    <p className="text-sm">No conversations found</p>
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-12 h-12 mb-2 opacity-30" />
+                    <p className="text-sm">No conversations yet</p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -271,60 +424,63 @@ export function ChatPage() {
         {/* Chat Section */}
         <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
           {/* Chat Header */}
-          <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex justify-between items-center shadow-md">
+          <div className="p-4 bg-white border-b border-gray-200 shadow-sm flex justify-between items-center">
             <div className="flex items-center gap-3">
               {selectedUser && (
-                <Avatar className="w-10 h-10 border-2 border-white">
-                  <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name || 'User'} />
-                  <AvatarFallback className="bg-blue-400">{selectedUser.name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-              )}
-              <div>
-                <div className="text-lg font-bold">
-                  {selectedUser ? selectedUser.name || 'Unknown User' : "Select a user to chat"}
-                </div>
-                {selectedUser && (
-                  <div className="text-sm text-blue-100 flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    Active now
+                <>
+                  <Avatar className="w-10 h-10 border-2 border-blue-500">
+                    <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name || 'User'} />
+                    <AvatarFallback className="bg-blue-400 text-white">{selectedUser.name?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-base font-semibold text-gray-900">
+                        {selectedUser ? selectedUser.name || 'Unknown User' : "Select a user to chat"}
+                      </p>
+                    </div>
+                    {selectedUser && (
+                      <p className="text-xs text-gray-500 mt-0.5">{selectedUser.email}</p>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
-            {selectedUser && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => {
-                    const chatId = user?.uid && selectedUser.id ? 
-                      (user.uid < selectedUser.id ? 
-                        `${user.uid}_${selectedUser.id}` : 
-                        `${selectedUser.id}_${user.uid}`) : 
-                      '';
-                    navigate(`/video-call/${chatId}`);
-                  }}
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                  size="sm"
-                >
-                  <Video className="h-4 w-4 mr-2" />
-                  Video
-                </Button>
-                <Button
-                  onClick={() => {
-                    const chatId = user?.uid && selectedUser.id ? 
-                      (user.uid < selectedUser.id ? 
-                        `${user.uid}_${selectedUser.id}` : 
-                        `${selectedUser.id}_${user.uid}`) : 
-                      '';
-                    navigate(`/voice-call/${chatId}`);
-                  }}
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                  size="sm"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Voice
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {selectedUser && (
+                <>
+                  <Button
+                    onClick={() => {
+                      const chatId = user?.uid && selectedUser.id ? 
+                        (user.uid < selectedUser.id ? 
+                          `${user.uid}_${selectedUser.id}` : 
+                          `${selectedUser.id}_${user.uid}`) : 
+                        '';
+                      navigate(`/video-call/${chatId}`);
+                    }}
+                    className="bg-blue-100 hover:bg-blue-200 text-blue-700 border-0"
+                    size="sm"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    Video
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const chatId = user?.uid && selectedUser.id ? 
+                        (user.uid < selectedUser.id ? 
+                          `${user.uid}_${selectedUser.id}` : 
+                          `${selectedUser.id}_${user.uid}`) : 
+                        '';
+                      navigate(`/voice-call/${chatId}`);
+                    }}
+                    className="bg-green-100 hover:bg-green-200 text-green-700 border-0"
+                    size="sm"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Voice
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Chat Messages */}
@@ -386,6 +542,21 @@ export function ChatPage() {
                       )}
                     </div>
                   ))}
+                  {isTyping && (
+                    <div className="flex items-end gap-2">
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name || 'User'} />
+                        <AvatarFallback className="bg-gray-400 text-white text-xs">
+                          {selectedUser.name?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex items-center gap-1 bg-white text-gray-800 px-4 py-2 rounded-2xl shadow-sm">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </>
               ) : (
@@ -406,8 +577,8 @@ export function ChatPage() {
 
           {/* Message Input */}
           {selectedUser && (
-            <div className="bg-white border-t border-gray-200 p-4 shadow-lg">
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <div className="bg-white border-t border-gray-200 p-4">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-3">
                 <input
                   type="file"
                   onChange={(e) => {
@@ -420,21 +591,21 @@ export function ChatPage() {
                   htmlFor="file-upload"
                   className="cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <Paperclip className="w-5 h-5 text-gray-600 hover:text-blue-600" />
+                  <Paperclip className="w-5 h-5 text-gray-500 hover:text-blue-600" />
                 </label>
                 <input
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="Type a message..."
-                  className="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <Button 
                   type="submit" 
                   disabled={!newMessage.trim()} 
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4" />
                 </Button>
               </form>
             </div>
