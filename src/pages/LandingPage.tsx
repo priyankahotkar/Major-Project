@@ -5,6 +5,7 @@ import { Compass, Users, Calendar, MessageSquare, Star, ArrowRight } from 'lucid
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/firebase";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Footer } from "../components/layout/Footer";
 
 interface Mentor {
   id: string;
@@ -90,8 +91,8 @@ export const LandingPage: React.FC = () => {
             Discover mentors who truly understand your ambitions and guide you with real-world expertise.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button size="lg" className="px-10 py-6 text-lg" onClick={() => navigate('/auth')}>
-              Start Learning <ArrowRight className="ml-2 h-5 w-5" />
+            <Button size="lg" className="px-10 py-6 text-lg text-white" onClick={() => navigate('/auth')}>
+              Start Learning <ArrowRight className="ml-2 h-5 w-5 text-white" />
             </Button>
             <Button size="lg" variant="outline" className="px-10 py-6 text-lg" onClick={() => navigate('/about')}>
               How It Works
@@ -146,9 +147,14 @@ export const LandingPage: React.FC = () => {
           <h3 className="text-lg font-bold">{mentor.name}</h3>
           <p className="text-sm text-foreground/60">{mentor.expertise}</p>
           <p className="text-xs text-foreground/40">Domain: {mentor.domain}</p>
-          <p className="flex items-center text-sm text-yellow-500 mt-1">
-            <Star className="h-4 w-4 mr-1" /> {mentor.highestFrequencyRating}
-          </p>
+          <div className="flex items-center gap-1 mt-1 text-yellow-500">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={`h-4 w-4 ${i < Number(mentor.highestFrequencyRating || 0) ? 'fill-current' : 'text-gray-300'}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     ))}
@@ -175,10 +181,10 @@ export const LandingPage: React.FC = () => {
   </div>
 </section>
 
-
-
-
-
+      <Footer />
     </div>
+
   );
 };
+
+export default LandingPage;
