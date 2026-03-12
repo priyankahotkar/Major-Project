@@ -85,8 +85,10 @@ export function NotesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      console.log("Notion status:", data);
       setNotionConnected(!!data.connected);
-    } catch {
+    } catch (e) {
+      console.error("Notion status error:", e);
       setNotionConnected(false);
     }
   }, [user]);
@@ -95,18 +97,21 @@ export function NotesPage() {
     if (!user) return;
     setNotionLoading(true);
     setNotionError(null);
+    console.log("Fetching Notion notes...");
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${API_BASE}/api/notion/notes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      console.log("Notion notes response:", { status: res.status, data });
       if (!res.ok) {
         if (data.connected === false) setNotionConnected(false);
         throw new Error(data.error || "Failed to load Notion pages");
       }
       setNotionPages(data.pages || []);
     } catch (e) {
+      console.error("Notion notes error:", e);
       setNotionError(e instanceof Error ? e.message : "Failed to load pages");
       setNotionPages([]);
     } finally {
@@ -116,12 +121,20 @@ export function NotesPage() {
 
   useEffect(() => {
     const q = searchParams.get("notion");
-    if (q === "connected") setNotionMessage("connected");
-    else if (q === "denied") setNotionMessage("denied");
-    else if (q === "error") setNotionMessage("error");
-    if (q) {
+    if (q === "connected") {
+      setNotionMessage("connected");
       setSearchParams({}, { replace: true });
       setActiveTab("notion");
+      // Delay to ensure Firestore has time to write the token
+      setTimeout(() => {
+        setNotionConnected(true); // Force true so notes fetch immediately
+      }, 1000);
+    } else if (q === "denied") {
+      setNotionMessage("denied");
+      setSearchParams({}, { replace: true });
+    } else if (q === "error") {
+      setNotionMessage("error");
+      setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
@@ -276,35 +289,36 @@ export function NotesPage() {
                   </p>
                 )}
                 {notes.map((note) => (
-                  <button
-                    key={note.id}
-                    onClick={() => handleSelectNote(note)}
-                    className={`w-full text-left px-3 py-2 rounded-md border text-sm mb-1 flex items-center justify-between ${
-                      selectedNoteId === note.id
-                        ? "bg-blue-50 border-blue-300"
-                        : "bg-white border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="flex-1 mr-2">
-                      <div className="font-medium text-gray-900 line-clamp-1">
-                        {note.title || "Untitled note"}
-                      </div>
-                      <div className="text-xs text-gray-500 line-clamp-1">
-                        {note.content || "Empty note"}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(note.id);
-                      }}
-                      className="text-xs text-red-500 hover:text-red-600"
-                    >
-                      Delete
-                    </button>
-                  </button>
-                ))}
+  <div
+    key={note.id}
+    onClick={() => handleSelectNote(note)}
+    className={`w-full text-left px-3 py-2 rounded-md border text-sm mb-1 flex items-center justify-between cursor-pointer ${
+      selectedNoteId === note.id
+        ? "bg-blue-50 border-blue-300"
+        : "bg-white border-gray-200 hover:bg-gray-50"
+    }`}
+  >
+    <div className="flex-1 mr-2">
+      <div className="font-medium text-gray-900 line-clamp-1">
+        {note.title || "Untitled note"}
+      </div>
+      <div className="text-xs text-gray-500 line-clamp-1">
+        {note.content || "Empty note"}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDelete(note.id);
+      }}
+      className="text-xs text-red-500 hover:text-red-600"
+    >
+      Delete
+    </button>
+  </div>
+))}
               </CardContent>
             </Card>
 
