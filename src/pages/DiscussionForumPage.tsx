@@ -88,7 +88,7 @@ export function DiscussionForumPage() {
     if (!newMessage.trim() || !user || !selectedTopic) return;
 
     const toxicityScore = await analyzeToxicity(newMessage);
-    if (toxicityScore !== null && toxicityScore > 0.55) {
+    if (toxicityScore !== null && toxicityScore > 0.2) {
       setToxicityWarning("⚠️ Message appears toxic. Please rewrite politely.");
       return;
     }
