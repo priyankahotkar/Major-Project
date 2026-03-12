@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 interface AuthContextType {
   user: User | null;
   role: string | null;
+  userName: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<User>;
   registerWithEmail: (email: string, password: string, role: "mentor" | "mentee") => Promise<User>;
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Fetch user role from Firestore
@@ -31,12 +33,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userSnap.exists()) {
         const userData = userSnap.data();
         setRole(userData.role || null);
+        setUserName(userData.name || null);
 
         if (!userData.role) {
           navigate("/auth"); // Redirect to role selection if role is not set
         }
       } else {
         setRole(null); // Ensure role is null for new users
+        setUserName(null);
         navigate("/auth"); // Redirect to role selection for new users
       }
     } catch (error) {
@@ -52,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
         setRole(null);
+        setUserName(null);
       }
     });
 
@@ -180,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         role,
+        userName,
         signInWithGoogle: handleSignIn,
         signInWithEmail: handleSignInWithEmail,
         registerWithEmail: handleRegisterWithEmail, // Expose registerWithEmail
