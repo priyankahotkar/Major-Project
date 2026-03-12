@@ -88,7 +88,7 @@ export function DiscussionForumPage() {
     const toxicityScore = await analyzeToxicity(newMessage);
     if (toxicityScore !== null && toxicityScore > 0.55) {
       setToxicityWarning("⚠️ Message appears toxic. Please rewrite politely.");
-      return;
+      return;4
     }
 
     setToxicityWarning(null);

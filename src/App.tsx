@@ -18,10 +18,10 @@ import { FAQPage } from "./pages/FAQPage"; // Import the FAQ page
 import { AboutPage } from "./pages/AboutPage";
 import { RoadmapPage } from "./pages/RoadmapPage";
 import { AIInterviewPage } from "./pages/AIInterviewPage";
-import { AttendanceLeaderboard } from "./components/AttendanceLeaderboard";
-import { ActivityProgressTracker } from "./components/ActivityProgressTracker";
+import { AttendanceLeaderboard } from "./pages/AttendanceLeaderboard";
+import { ActivityProgressTracker } from "./pages/ActivityProgressTracker";
 import { Layout } from "./components/layout/Layout";
-import Chatbot from "./components/Chatbot";
+import Chatbot from "./pages/Chatbot";
 
 // ✅ Private route protection (only for authenticated users)
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
