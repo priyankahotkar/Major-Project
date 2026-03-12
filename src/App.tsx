@@ -18,8 +18,9 @@ import { FAQPage } from "./pages/FAQPage"; // Import the FAQ page
 import { AboutPage } from "./pages/AboutPage";
 import { RoadmapPage } from "./pages/RoadmapPage";
 import { AIInterviewPage } from "./pages/AIInterviewPage";
-import { LeaderboardPage } from "./pages/LeaderboardPage";
-import { ProgressTrackerPage } from "./pages/ProgressTrackerPage";
+import { AttendanceLeaderboard } from "./components/AttendanceLeaderboard";
+import { ActivityProgressTracker } from "./components/ActivityProgressTracker";
+import { Layout } from "./components/layout/Layout";
 import Chatbot from "./components/Chatbot";
 
 // ✅ Private route protection (only for authenticated users)
@@ -57,6 +58,44 @@ const DashboardWithVideoCall: React.FC = () => {
   );
 };
 
+// ✅ Leaderboard Page Wrapper
+const LeaderboardPageWrapper: React.FC = () => {
+  return (
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+        <div className="container mx-auto px-4 pt-4">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Attendance Leaderboard</h1>
+            <p className="text-gray-600">
+              See who's leading in attendance across our mentorship community
+            </p>
+          </div>
+          <AttendanceLeaderboard />
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+// ✅ Progress Tracker Page Wrapper
+const ProgressTrackerPageWrapper: React.FC = () => {
+  return (
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+        <div className="container mx-auto px-4 pt-4">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Activity Progress</h1>
+            <p className="text-gray-600">
+              Track your engagement and see how you compare with other users
+            </p>
+          </div>
+          <ActivityProgressTracker />
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
 // ✅ Main App Component with correct structure
 const App: React.FC = () => {
   return (
@@ -81,8 +120,8 @@ const App: React.FC = () => {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/roadmap" element={<PrivateRoute><RoadmapPage /></PrivateRoute>} />
           <Route path="/ai-interview" element={<PrivateRoute><AIInterviewPage /></PrivateRoute>} />
-          <Route path="/leaderboard" element={<PrivateRoute><LeaderboardPage /></PrivateRoute>} />
-          <Route path="/progress" element={<PrivateRoute><ProgressTrackerPage /></PrivateRoute>} />
+          <Route path="/leaderboard" element={<PrivateRoute><LeaderboardPageWrapper /></PrivateRoute>} />
+          <Route path="/progress" element={<PrivateRoute><ProgressTrackerPageWrapper /></PrivateRoute>} />
           </Routes>
           <Chatbot />
         </NotificationProvider>
