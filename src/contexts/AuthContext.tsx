@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 interface AuthContextType {
   user: User | null;
   role: string | null;
+  authLoading: boolean;
   userName: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<User>;
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [userName, setUserName] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -50,13 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        await fetchUserRole(currentUser.uid);
-      } else {
-        setUser(null);
-        setRole(null);
-        setUserName(null);
+      try {
+        if (currentUser) {
+          setUser(currentUser);
+          await fetchUserRole(currentUser.uid);
+        } else {
+          setUser(null);
+          setRole(null);
+          setUserName(null);
+        }
+      } finally {
+        setAuthLoading(false);
       }
     });
 
@@ -185,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         role,
+        authLoading,
         userName,
         signInWithGoogle: handleSignIn,
         signInWithEmail: handleSignInWithEmail,
