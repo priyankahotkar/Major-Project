@@ -1,9 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-const openAIApiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
-
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 const SYSTEM_PROMPT = `You are CareerMentix Assistant, a helpful AI chatbot embedded in the CareerMentix mentoring platform.
 CareerMentix connects mentees with experienced mentors for career guidance, skill development, and professional growth.
