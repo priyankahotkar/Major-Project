@@ -13,6 +13,9 @@ interface GithubUserData {
     repo: string;
     created_at: string;
   }>;
+  languages: Array<{
+    type:string
+  }>
 }
 
 interface LeetCodeUserData {
@@ -86,6 +89,20 @@ export class GeminiService {
       );
       const events = await eventsResponse.json();
 
+let languageStats: Record<string, number> = {};
+
+await Promise.all(
+  repos.map(async (repo: any) => {
+    const langs = await fetch(repo.languages_url).then(res => res.json());
+
+    for (const lang in langs) {
+      languageStats[lang] = (languageStats[lang] || 0) + langs[lang];
+    }
+  })
+);
+
+      console.log(JSON.stringify(languageStats, null, 2));
+
       return {
         public_repos: userData.public_repos,
         followers: userData.followers,
@@ -99,6 +116,7 @@ export class GeminiService {
           repo: event.repo.name,
           created_at: event.created_at,
         })),
+        languages: userData.languageStats,
       };
     } catch (error) {
       console.error('Error fetching GitHub data:', error);
@@ -182,6 +200,7 @@ GitHub Profile:
 - Followers: ${githubData.followers}
 - Top Languages: ${Array.from(new Set(githubData.repos.map(r => r.language).filter(Boolean))).join(', ')}
 - Recent Activity: ${githubData.recent_events.length} events in the last month
+- Languages: 
 
 LeetCode Profile:
 - Ranking: ${leetcodeData.ranking}
