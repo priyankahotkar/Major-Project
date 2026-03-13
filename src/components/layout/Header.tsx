@@ -86,13 +86,6 @@ export function Header() {
                   Leaderboard
                 </Link>
 
-                <Link
-                  to="/progress"
-                  className={getLinkClass("/progress")}
-                >
-                  Progress
-                </Link>
-
                 <Link 
                   to="/notes" 
                   className={getLinkClass("/notes")}
