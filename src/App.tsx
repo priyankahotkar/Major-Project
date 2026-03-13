@@ -20,6 +20,9 @@ import { RoadmapPage } from "./pages/RoadmapPage";
 import { AIInterviewPage } from "./pages/AIInterviewPage";
 import { NotesPage } from "./pages/NotesPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { LeaderboardPage } from "./pages/LeaderboardPage";
+import { ProgressTrackerPage } from "./pages/ProgressTrackerPage";
+import Chatbot from "./components/Chatbot";
 
 // ✅ Private route protection (only for authenticated users)
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,6 +74,8 @@ const App: React.FC = () => {
         <NotificationProvider>
           {/* Global notifications listener (shows popups for unread messages) */}
           <Notifications />
+          {/* Global AI chatbot widget — visible on all pages */}
+          <Chatbot />
           <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
@@ -89,6 +94,8 @@ const App: React.FC = () => {
           <Route path="/ai-interview" element={<PrivateRoute><AIInterviewPage /></PrivateRoute>} />
           <Route path="/notes" element={<PrivateRoute><NotesPage /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/leaderboard" element={<PrivateRoute><LeaderboardPage /></PrivateRoute>} />
+          <Route path="/progress" element={<PrivateRoute><ProgressTrackerPage /></PrivateRoute>} />
           </Routes>
         </NotificationProvider>
       </AuthProvider>
