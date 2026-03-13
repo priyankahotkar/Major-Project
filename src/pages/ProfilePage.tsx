@@ -30,6 +30,12 @@ export function ProfilePage() {
   const { user, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingBasic, setEditingBasic] = useState(false);
+  const [savingBasic, setSavingBasic] = useState(false);
+  const [basicEditData, setBasicEditData] = useState<{ fullName: string; email: string }>({
+    fullName: "",
+    email: "",
+  });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editData, setEditData] = useState<Record<string, string>>({});
@@ -68,6 +74,61 @@ export function ProfilePage() {
 
   const details = profile?.details || {};
   const isMentor = profile?.role === "mentor";
+
+  const startEditingBasic = () => {
+    setBasicEditData({
+      fullName: details.fullName || profile?.name || user?.displayName || "",
+      email: profile?.email || user?.email || "",
+    });
+    setEditingBasic(true);
+  };
+
+  const cancelEditingBasic = () => {
+    setEditingBasic(false);
+    setBasicEditData({ fullName: "", email: "" });
+  };
+
+  const saveBasicInfo = async () => {
+    if (!user) return;
+
+    const updatedFullName = basicEditData.fullName.trim();
+    const updatedEmail = basicEditData.email.trim();
+
+    if (!updatedFullName || !updatedEmail) return;
+
+    setSavingBasic(true);
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const updatedDetails = { ...details, fullName: updatedFullName };
+
+      await setDoc(
+        userRef,
+        {
+          name: updatedFullName,
+          email: updatedEmail,
+          details: updatedDetails,
+          updatedAt: new Date(),
+        },
+        { merge: true }
+      );
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: updatedFullName,
+              email: updatedEmail,
+              details: updatedDetails,
+            }
+          : prev
+      );
+      setEditingBasic(false);
+    } catch (error) {
+      console.error("Error saving basic info:", error);
+    } finally {
+      setSavingBasic(false);
+    }
+  };
 
   const startEditing = () => {
     if (isMentor) {
@@ -188,27 +249,73 @@ export function ProfilePage() {
           <div className="space-y-4">
             {/* Basic Information */}
             <div className="bg-white rounded-2xl shadow-md p-6">
-              <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-blue-600" />
-                Basic Information
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  <User className="w-5 h-5 text-blue-600" />
+                  Basic Information
+                </h2>
+                {!editingBasic ? (
+                  <button
+                    onClick={startEditingBasic}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                ) : null}
+              </div>
               <div className="space-y-4">
-                <InfoRow
-                  icon={<User className="w-4 h-4 text-gray-400" />}
-                  label="Full Name"
-                  value={details.fullName || profile?.name || user?.displayName || "—"}
-                />
-                <InfoRow
-                  icon={<Mail className="w-4 h-4 text-gray-400" />}
-                  label="Email"
-                  value={profile?.email || user?.email || "—"}
-                />
+                {editingBasic ? (
+                  <>
+                    <EditField
+                      label="Full Name"
+                      value={basicEditData.fullName}
+                      onChange={(value) => setBasicEditData((prev) => ({ ...prev, fullName: value }))}
+                    />
+                    <EditField
+                      label="Email"
+                      value={basicEditData.email}
+                      onChange={(value) => setBasicEditData((prev) => ({ ...prev, email: value }))}
+                      type="email"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <InfoRow
+                      icon={<User className="w-4 h-4 text-gray-400" />}
+                      label="Full Name"
+                      value={details.fullName || profile?.name || user?.displayName || "—"}
+                    />
+                    <InfoRow
+                      icon={<Mail className="w-4 h-4 text-gray-400" />}
+                      label="Email"
+                      value={profile?.email || user?.email || "—"}
+                    />
+                  </>
+                )}
                 <InfoRow
                   icon={<Award className="w-4 h-4 text-gray-400" />}
                   label="Role"
                   value={isMentor ? "Mentor" : "Mentee"}
                 />
               </div>
+              {editingBasic && (
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    onClick={cancelEditingBasic}
+                    className="px-4 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveBasicInfo}
+                    disabled={savingBasic || !basicEditData.fullName.trim() || !basicEditData.email.trim()}
+                    className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {savingBasic ? "Saving..." : "Update"}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Professional / Academic Details */}
@@ -395,16 +502,18 @@ function EditField({
   label,
   value,
   onChange,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  type?: "text" | "email";
 }) {
   return (
     <div>
       <label className="text-xs text-gray-500 block mb-1">{label}</label>
       <input
-        type="text"
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
