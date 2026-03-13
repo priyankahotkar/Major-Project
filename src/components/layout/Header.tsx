@@ -79,6 +79,13 @@ export function Header() {
                   AI Interview
                 </Link>
 
+                <Link
+                  to="/leaderboard"
+                  className={getLinkClass("/leaderboard")}
+                >
+                  Leaderboard
+                </Link>
+
                 <Link 
                   to="/notes" 
                   className={getLinkClass("/notes")}
