@@ -134,7 +134,7 @@ export function DiscussionForumPage() {
     const toxicityScore = await analyzeToxicity(newMessage);
     if (toxicityScore !== null && toxicityScore > 0.2) {
       setToxicityWarning("⚠️ Message appears toxic. Please rewrite politely.");
-      return;4
+      return;
     }
 
     setToxicityWarning(null);
