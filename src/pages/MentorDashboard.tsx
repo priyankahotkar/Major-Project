@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { MessageSquare, Video, LogOut, PlusCircle, Sun, Moon } from 'lucide-react';
+import { MessageSquare, Video, LogOut, PlusCircle, Sun, Moon, Calendar } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { doc, setDoc, collection, query, where, orderBy, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -156,26 +156,65 @@ export function MentorDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Quick Actions */}
           <div className="col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
-              <h2 className="text-xl sm:text-2xl font-extrabold mb-2 text-primary">Quick Actions</h2>
-              <div className="space-y-3">
+            <div className="bg-gradient-to-b from-primary/10 via-white to-white rounded-2xl shadow-md border border-primary/10 p-6 space-y-5">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">Quick Actions</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Jump into the most common things you do as a mentor.
+                </p>
+              </div>
+              <div className="space-y-2.5">
                 <Link to="/chat">
-                  <Button className="w-full justify-start" variant="outline">
-                    <MessageSquare className="mr-2 h-5 w-5" /> Chat with Mentees
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Chat with Mentees</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Messages</span>
                   </Button>
                 </Link>
                 <Link to="/discussion-forum">
-                  <Button className="w-full justify-start" variant="outline">
-                    <MessageSquare className="mr-2 h-5 w-5" /> Discussion Forum
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Discussion Forum</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Ask &amp; answer</span>
                   </Button>
                 </Link>
                 <Link to="/faq">
-                  <Button className="w-full justify-start" variant="outline">
-                    <MessageSquare className="mr-2 h-5 w-5" /> FAQs
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">FAQs</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Common questions</span>
                   </Button>
                 </Link>
-                <Button onClick={generateJitsiRoom} className="w-full justify-start bg-blue-500 text-white">
-                  <PlusCircle className="mr-2 h-5 w-5" /> Start New Video Call
+                <Link to="/roadmap">
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">AI roadmap</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Personal learning plan</span>
+                  </Button>
+                </Link>
+                <Link to="/ai-interview">
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">AI mock interview</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Practice rounds</span>
+                  </Button>
+                </Link>
+                <Button onClick={generateJitsiRoom} className="w-full justify-between bg-blue-500 hover:bg-blue-600 text-white">
+                  <span className="flex items-center gap-2">
+                    <PlusCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Start New Video Call</span>
+                  </span>
+                  <span className="text-[11px] text-blue-100">Create room</span>
                 </Button>
               </div>
             </div>
