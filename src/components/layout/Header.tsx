@@ -1,10 +1,17 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, ChevronDown, ChevronUp } from 'lucide-react';
+
+function getInitials(name?: string | null) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return parts[0][0].toUpperCase();
+}
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, userName } = useAuth();
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -71,42 +78,27 @@ export function Header() {
                 >
                   AI Interview
                 </Link>
+
                 <Link 
-                  to="/leaderboard" 
-                  className={getLinkClass("/leaderboard")}
+                  to="/notes" 
+                  className={getLinkClass("/notes")}
                 >
-                  Leaderboard
+                  Notes
                 </Link>
-                <Link 
-                  to="/progress" 
-                  className={getLinkClass("/progress")}
-                >
-                  Progress
-                </Link>
-                <div className="relative group">
-                  <button className="flex items-center space-x-2">
+    
+                <Link to="/profile" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                  {user.photoURL ? (
                     <img 
-                      src={user.photoURL || '/default-avatar.png'} 
+                      src={user.photoURL} 
                       alt="Profile" 
-                      className="w-8 h-8 rounded-full border-2 border-gray-200"
+                      className="w-8 h-8 rounded-full border-2 border-gray-200 object-cover"
                     />
-                    <span className="text-gray-700">{user.displayName}</span>
-                  </button>
-                  <div className="absolute right-0 w-48 mt-2 py-2 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <Link 
-                      to="/profile" 
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Profile
-                    </Link>
-                    <button 
-                      onClick={logout}
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full border-2 border-gray-200 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                      <span className="text-xs font-bold text-white">{getInitials(userName || user.displayName || user.email)}</span>
+                    </div>
+                  )}
+                </Link>
               </>
             ) : (
               <div className="flex items-center space-x-4">

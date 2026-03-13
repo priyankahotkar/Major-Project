@@ -160,6 +160,14 @@ export class GeminiService {
     duration: string;
   }): Promise<string> {
     try {
+      const duration = (userInfo.duration || '').toLowerCase();
+      let totalWeeks = 12;
+
+      if (duration.includes('1 month')) totalWeeks = 4;
+      else if (duration.includes('3 month')) totalWeeks = 12;
+      else if (duration.includes('6 month')) totalWeeks = 24;
+      else if (duration.includes('1 year')) totalWeeks = 52;
+
       // Fetch data from all platforms
       const [githubData, leetcodeData, codeforcesData] = await Promise.all([
         this.fetchGithubData(userInfo.githubUsername),
@@ -191,18 +199,55 @@ Codeforces Profile:
 User Goals:
 - ${userInfo.goal}
 - Desired Duration: ${userInfo.duration}
+- Total Weeks (approx): ${totalWeeks}
 
-Based on this data, create a detailed learning roadmap that includes:
-1. Assessment of current skills and areas for improvement
-2. Weekly breakdown of tasks and learning objectives
-3. Recommended practice problems (from LeetCode/Codeforces) matching their current level
-4. Project suggestions based on their GitHub activity and interests
-5. Resources and learning materials
-6. Milestones and progress tracking metrics
-7. Tips for improving contest performance
-8. Suggested open-source contribution opportunities
+Based on this data, create a detailed learning roadmap that focuses on concrete weekly plans:
 
-Format the response in markdown with clear sections and subsections.`;
+1. Start with a **very short overall assessment paragraph** (3–5 sentences max). Do NOT put this assessment under any "Week N" heading.
+
+2. Then provide a **weekly breakdown of tasks and learning objectives for exactly ${totalWeeks} weeks**.
+   - Use markdown headings in this exact form so they are easy to parse:
+     - "Week 1 - short title"
+     - "Week 2 - short title"
+     - ...
+     - "Week ${totalWeeks} - short title"
+   - Under each week heading, include:
+     - One short objective sentence.
+     - A bullet list (\`- \`) of 3–7 specific, actionable tasks for that week.
+   - Do NOT create any extra weeks, empty weeks, or placeholder weeks like "Week 3 ---".
+
+3. After the weekly plan, you may add additional sections (outside of any "Week N" heading) for:
+   - Recommended practice problems (from LeetCode/Codeforces) matching their current level.
+   - Project suggestions based on their GitHub activity and interests.
+   - Resources and learning materials.
+   - Milestones and progress tracking metrics.
+   - Tips for improving contest performance.
+   - Suggested open-source contribution opportunities.
+
+Format the response in markdown with clear sections and subsections, and make sure every weekly plan section starts with "Week N - " as described above so it can be easily parsed.
+
+Example output format (for a 2-week plan example only; you must output ${totalWeeks} weeks for the real user):
+
+### Overall Assessment
+You have a solid foundation in programming basics. Your next gains will come from consistent problem-solving and one portfolio project. Focus on building habits and tightening fundamentals before pushing difficulty.
+
+## Weekly Plan
+
+### Week 1 - Foundations & Routine
+Objective: Build a daily routine and refresh core basics.
+- Do 5 easy problems on arrays/strings.
+- Review time/space complexity basics.
+- Set up a GitHub repo for your learning notes.
+
+### Week 2 - Problem Solving & Patterns
+Objective: Learn common patterns and apply them consistently.
+- Do 5 easy + 2 medium problems using two pointers / sliding window.
+- Write notes: pattern, when to use, and pitfalls for each problem.
+- Refactor one past solution for readability.
+
+## Resources
+- (Add resource links / titles here)
+`;
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
@@ -250,15 +295,10 @@ Feedback: ${t.feedback}`
 - Difficulty must adapt: good answers -> harder, weak answers -> easier/clarifying.
 - Java should be the default language for coding questions.
 - Do NOT include any code execution results, only plain text.
-- When summary stage is reached, do NOT ask more questions. Instead, produce a compact evaluation report in markdown with:
-  - Score out of 10
-  - Strengths
-  - Weak areas
-  - Topics to improve
-  - Hiring recommendation (e.g., Strong Hire / Hire / Weak Hire / No Hire).
+- When summary stage is reached, do NOT ask more questions. Instead, evaluate the candidate based on the entire conversation (all Q&A so far) and produce ONLY a final report. Start your response with SUMMARY_REPORT_MARKDOWN: then the markdown report. The report must include these sections as headings (## or ###): Overall Score, Performance Summary, Technical Knowledge, Problem Solving, Communication Skills, Coding Quality, Strengths, Areas for Improvement, Recommended Resources, Interview Transcript. Fill each section based on the candidate's answers; use N/A or a brief note where a section does not apply (e.g. no coding yet). Even if the interview was ended early with few answers, still produce this report.
 Format:
 - For normal stages: start with FEEDBACK: ... then QUESTION: ...
-- For final summary: start with SUMMARY_REPORT_MARKDOWN: then the markdown report only.`;
+- For final summary (when stage is summary): start with SUMMARY_REPORT_MARKDOWN: then the markdown report only. Do not include FEEDBACK or QUESTION.`;
 
     const stageContext = `Current stage: ${state.stage}
 Current difficulty: ${state.difficulty}
@@ -275,7 +315,7 @@ ${lastUserAnswer || 'No answer yet (this is the first question).'}
     const prompt = `${systemPrompt}
 
 Now generate the next step based on the current stage and answer.
-Remember: ONE question at a time, and keep responses concise.
+${state.stage === 'summary' ? 'The interview has been ended. Evaluate the candidate based on the conversation above and output ONLY SUMMARY_REPORT_MARKDOWN: followed by your markdown report with the required sections.' : 'Remember: ONE question at a time, and keep responses concise.'}
 
 ${stageContext}`;
 
@@ -283,7 +323,21 @@ ${stageContext}`;
     const response = await result.response;
     const text = response.text();
 
-    // Simple parsing heuristic
+    // When we requested a summary (stage is summary), always return a report
+    if (state.stage === 'summary') {
+      const summaryMarkdown = text.trim().startsWith('SUMMARY_REPORT_MARKDOWN:')
+        ? text.replace(/^SUMMARY_REPORT_MARKDOWN:\s*/i, '').trim()
+        : text.trim();
+      return {
+        interviewerMessage: 'Thank you for completing the interview. Here is your report:',
+        nextStage: 'summary',
+        nextDifficulty: state.difficulty,
+        isFinal: true,
+        summaryMarkdown: summaryMarkdown || 'Report generated. Review your feedback above.',
+      };
+    }
+
+    // Simple parsing heuristic for normal steps
     if (text.trim().startsWith('SUMMARY_REPORT_MARKDOWN:')) {
       const summaryMarkdown = text.replace('SUMMARY_REPORT_MARKDOWN:', '').trim();
       return {

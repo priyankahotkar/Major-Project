@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { MessageSquare, Video, LogOut, PlusCircle, Sun, Moon } from 'lucide-react';
+import { MessageSquare, Video, LogOut, PlusCircle, Sun, Moon, Calendar } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { doc, setDoc, collection, query, where, orderBy, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
-import Notifications from "@/components/Notifications";
+import MentorSessionNotifications from "@/components/MentorSessionNotifications";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
@@ -21,7 +21,7 @@ interface Mentee {
 interface Session {
   id: string;
   menteeName: string;
-  date: string;
+  date: Date;
   timeSlot: string;
 }
 
@@ -30,8 +30,15 @@ export function MentorDashboardPage() {
   const [jitsiRoom, setJitsiRoom] = useState<string | null>(null);
   const [bookedSessions, setBookedSessions] = useState<Session[]>([]);
   const [mentees, setMentees] = useState<Mentee[]>([]);
-  const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const navigate = useNavigate();
+
+  const isSameDay = (a: Date, b: Date) => {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  };
 
   // Fetch booked sessions for the mentor
   useEffect(() => {
@@ -47,21 +54,33 @@ export function MentorDashboardPage() {
         );
         const snapshot = await getDocs(q);
 
-        const sessionsList = snapshot.docs.map((doc) => {
+        const sessionsList: Session[] = snapshot.docs.map((doc) => {
           const data = doc.data();
-          const date =
+          const dateValue =
             data.date?.toDate?.() || // If it's a Firestore Timestamp, convert to Date
             new Date(data.date); // If it's a string, convert to Date
+
+          const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
 
           return {
             id: doc.id,
             menteeName: data.menteeName,
-            date: date.toLocaleString(), // Convert Date to readable string
+            date,
             timeSlot: data.timeSlot,
           };
-        }) as Session[];
+        });
 
-        setBookedSessions(sessionsList);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Hide sessions with date < current date on mentor dashboard
+        const upcomingSessions = sessionsList.filter((session) => {
+          const sessionDate = new Date(session.date);
+          sessionDate.setHours(0, 0, 0, 0);
+          return sessionDate >= today;
+        });
+
+        setBookedSessions(upcomingSessions);
       } catch (error) {
         console.error("Error fetching booked sessions for mentor:", error);
       }
@@ -104,46 +123,6 @@ export function MentorDashboardPage() {
     fetchMentees();
   }, [user]);
 
-  useEffect(() => {
-    const fetchTimeSlots = async () => {
-      if (!user) return;
-
-      try {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setTimeSlots(userSnap.data().availableTimeSlots || []);
-        }
-      } catch (error) {
-        console.error("Error fetching time slots:", error);
-      }
-    };
-
-    fetchTimeSlots();
-  }, [user]);
-
-  const handleTimeSlotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
-    if (checked) {
-      setTimeSlots([...timeSlots, value]);
-    } else {
-      setTimeSlots(timeSlots.filter((slot) => slot !== value));
-    }
-  };
-
-  const updateTimeSlots = async () => {
-    if (!user) return;
-
-    try {
-      const userRef = doc(db, "users", user.uid);
-      await setDoc(userRef, { availableTimeSlots: timeSlots }, { merge: true }); // Save updated time slots
-      alert("Time slots updated successfully!");
-    } catch (error) {
-      console.error("Error updating time slots:", error);
-      alert("Failed to update time slots. Please try again.");
-    }
-  };
-
   const generateJitsiRoom = async () => {
     if (!user) {
       console.error("User is not authenticated.");
@@ -177,36 +156,75 @@ export function MentorDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Quick Actions */}
           <div className="col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
-              <h2 className="text-xl sm:text-2xl font-extrabold mb-2 text-primary">Quick Actions</h2>
-              <div className="space-y-3">
+            <div className="bg-gradient-to-b from-primary/10 via-white to-white rounded-2xl shadow-md border border-primary/10 p-6 space-y-5">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">Quick Actions</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Jump into the most common things you do as a mentor.
+                </p>
+              </div>
+              <div className="space-y-2.5">
                 <Link to="/chat">
-                  <Button className="w-full justify-start" variant="outline">
-                    <MessageSquare className="mr-2 h-5 w-5" /> Chat with Mentees
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Chat with Mentees</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Messages</span>
                   </Button>
                 </Link>
                 <Link to="/discussion-forum">
-                  <Button className="w-full justify-start" variant="outline">
-                    <MessageSquare className="mr-2 h-5 w-5" /> Discussion Forum
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Discussion Forum</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Ask &amp; answer</span>
                   </Button>
                 </Link>
                 <Link to="/faq">
-                  <Button className="w-full justify-start" variant="outline">
-                    <MessageSquare className="mr-2 h-5 w-5" /> FAQs
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">FAQs</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Common questions</span>
                   </Button>
                 </Link>
-                <Button onClick={generateJitsiRoom} className="w-full justify-start bg-blue-500 text-white">
-                  <PlusCircle className="mr-2 h-5 w-5" /> Start New Video Call
+                <Link to="/roadmap">
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">AI roadmap</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Personal learning plan</span>
+                  </Button>
+                </Link>
+                <Link to="/ai-interview">
+                  <Button className="w-full justify-between bg-white hover:bg-primary/5 border border-slate-200 text-slate-900">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">AI mock interview</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">Practice rounds</span>
+                  </Button>
+                </Link>
+                <Button onClick={generateJitsiRoom} className="w-full justify-between bg-blue-500 hover:bg-blue-600 text-white">
+                  <span className="flex items-center gap-2">
+                    <PlusCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Start New Video Call</span>
+                  </span>
+                  <span className="text-[11px] text-blue-100">Create room</span>
                 </Button>
               </div>
             </div>
           </div>
           {/* Main Content Sections */}
           <div className="col-span-2 space-y-8">
-            {/* Notifications */}
+            {/* Notifications - new session bookings for this mentor */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <h2 className="text-2xl font-extrabold mb-4 text-primary">Notifications</h2>
-              <Notifications />
+              <MentorSessionNotifications />
             </div>
             {/* Booked Sessions */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -216,8 +234,21 @@ export function MentorDashboardPage() {
                   {bookedSessions.map((session) => (
                     <li key={session.id} className="p-4 bg-blue-50 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between shadow border-b">
                       <span className="font-semibold">Mentee: {session.menteeName}</span>
-                      <span>Date: {session.date}</span>
+                      <span>
+                        Date: {session.date.toLocaleDateString()}{" "}
+                        {session.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
                       <span>Time Slot: {session.timeSlot}</span>
+                      {isSameDay(session.date, new Date()) && (
+                        <Button
+                          className="mt-2 md:mt-0 bg-blue-600 text-white"
+                          size="sm"
+                          onClick={generateJitsiRoom}
+                        >
+                          <Video className="mr-1 h-4 w-4" />
+                          Start Session
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -253,27 +284,6 @@ export function MentorDashboardPage() {
                   <p className="text-gray-500">No mentees found</p>
                 )}
               </div>
-            </div>
-            {/* Time Slots */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-2xl font-extrabold mb-4 text-primary">Update Available Time Slots</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-                {["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"].map((slot) => (
-                  <label key={slot} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      value={slot}
-                      checked={timeSlots.includes(slot)}
-                      onChange={handleTimeSlotChange}
-                      className="form-checkbox"
-                    />
-                    <span>{slot}</span>
-                  </label>
-                ))}
-              </div>
-              <Button onClick={updateTimeSlots} className="bg-blue-500 text-white">
-                Update Time Slots
-              </Button>
             </div>
           </div>
         </div>
