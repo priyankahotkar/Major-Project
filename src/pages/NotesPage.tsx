@@ -387,7 +387,7 @@ export function NotesPage() {
                   <Button
                     onClick={handleConnectNotion}
                     disabled={notionLoading}
-                    className="w-fit"
+                    className="w-fit text-white"
                   >
                     {notionLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
