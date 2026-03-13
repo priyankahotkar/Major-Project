@@ -21,7 +21,7 @@ import { AIInterviewPage } from "./pages/AIInterviewPage";
 import { NotesPage } from "./pages/NotesPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
-import { ProgressTrackerPage } from "./pages/ProgressTrackerPage";
+// import { ProgressTrackerPage } from "./pages/ProgressTrackerPage";
 import Chatbot from "./components/Chatbot";
 
 // ✅ Private route protection (only for authenticated users)
@@ -95,7 +95,7 @@ const App: React.FC = () => {
           <Route path="/notes" element={<PrivateRoute><NotesPage /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="/leaderboard" element={<PrivateRoute><LeaderboardPage /></PrivateRoute>} />
-          <Route path="/progress" element={<PrivateRoute><ProgressTrackerPage /></PrivateRoute>} />
+          {/* <Route path="/progress" element={<PrivateRoute><ProgressTrackerPage /></PrivateRoute>} /> */}
           </Routes>
         </NotificationProvider>
       </AuthProvider>
