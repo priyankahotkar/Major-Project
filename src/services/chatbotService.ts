@@ -1,9 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+const openAIApiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
 
-const SYSTEM_PROMPT = `You are CareerMentix Assistant, a helpful AI chatbot embedded in the CareerMentix mentoring platform.
-CareerMentix connects mentees with experienced mentors for career guidance, skill development, and professional growth.
+// Correct initialization
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+
+const SYSTEM_PROMPT = `You are CareerMentix Assistant, a helpful AI chatbot embedded in the CareerMentix mentoring platform. CareerMentix connects mentees with experienced mentors for career guidance, skill development, and professional growth.
 
 You help users with:
 - Navigating the platform (booking sessions, using the forum, roadmaps, AI interview practice, notes, video/voice calls)
@@ -36,6 +39,7 @@ export async function sendMessageToGemini(
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
   userMessage: string
 ): Promise<string> {
+
   if (!genAI) {
     throw new Error("Gemini API key is not configured (VITE_GEMINI_API_KEY).");
   }
@@ -67,7 +71,6 @@ export async function sendMessageToGemini(
     } catch (error) {
       lastError = error;
 
-      // Try next model only for model/quota related errors.
       if (!isModelAvailabilityError(error)) {
         throw error;
       }
@@ -88,6 +91,7 @@ export async function sendMessageToOpenAI(
   history: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   userMessage: string
 ): Promise<string> {
+
   if (!isOpenAIConfigured()) {
     throw new Error("VITE_OPENAI_API_KEY is missing or invalid.");
   }
@@ -115,8 +119,10 @@ export async function sendMessageToOpenAI(
 
   const data = (await response.json()) as OpenAIResponse;
   const text = data.choices?.[0]?.message?.content?.trim();
+
   if (!text) {
     throw new Error("OpenAI returned an empty response.");
   }
+
   return text;
 }
