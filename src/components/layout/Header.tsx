@@ -78,6 +78,20 @@ export function Header() {
                 >
                   AI Interview
                 </Link>
+
+                <Link
+                  to="/leaderboard"
+                  className={getLinkClass("/leaderboard")}
+                >
+                  Leaderboard
+                </Link>
+
+                <Link 
+                  to="/notes" 
+                  className={getLinkClass("/notes")}
+                >
+                  Notes
+                </Link>
     
                 <Link to="/profile" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
                   {user.photoURL ? (

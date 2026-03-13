@@ -278,7 +278,7 @@ export function NotesPage() {
             <Card className="md:col-span-1 h-[70vh] flex flex-col">
               <CardTitle className="flex items-center justify-between">
                 <span>Your notes</span>
-                <Button size="sm" onClick={handleNewNote}>
+                <Button size="sm" onClick={handleNewNote} className="text-white">
                   New note
                 </Button>
               </CardTitle>
@@ -337,7 +337,7 @@ export function NotesPage() {
                   onChange={(e) => setContent(e.target.value)}
                   className="resize-none h-full"
                 />
-                <div className="mt-2 flex justify-end gap-2">
+                <div className="mt-2 flex justify-end gap-2 text-white">
                   <Button
                     onClick={handleSave}
                     disabled={isSaving || (!title.trim() && !content.trim())}
@@ -387,7 +387,7 @@ export function NotesPage() {
                   <Button
                     onClick={handleConnectNotion}
                     disabled={notionLoading}
-                    className="w-fit"
+                    className="w-fit text-white"
                   >
                     {notionLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,11 @@ interface Mentor {
   highestFrequencyRating: string;
 }
 
-export function DashboardPage() {
+interface DashboardPageProps {
+  children?: ReactNode;
+}
+
+export function DashboardPage({ children } : DashboardPageProps ) {
   const { user, logout } = useAuth();
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);

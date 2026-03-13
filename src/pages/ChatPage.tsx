@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Send, Video, Phone, MessageSquare, Paperclip, Users, Hash, Search, X } from "lucide-react";
+import { Send, Video, Phone, MessageSquare, Paperclip, Users, Hash, Search, X, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -16,6 +16,7 @@ import {
   getDocs,
   limit,
   updateDoc,
+  deleteDoc,
   doc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -29,6 +30,7 @@ interface Message {
   fileName?: string;
   fileURL?: string;
   isRead?: boolean;
+  edited?: boolean;
 }
 
 interface User {
@@ -71,8 +73,55 @@ export function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Get chatId helper
+  const getChatId = () => {
+    if (!user || !selectedUser) return "";
+    return user.uid < selectedUser.id
+      ? `${user.uid}_${selectedUser.id}`
+      : `${selectedUser.id}_${user.uid}`;
+  };
+
+  // Delete message from Firestore
+  const handleDeleteMessage = async (messageId: string) => {
+    const chatId = getChatId();
+    if (!chatId) return;
+    try {
+      await deleteDoc(doc(db, "chats", chatId, "messages", messageId));
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
+    setActiveMenuId(null);
+  };
+
+  // Start editing a message — puts text in the bottom input box
+  const handleStartEdit = (message: Message) => {
+    setEditingMessageId(message.id);
+    setNewMessage(message.text || "");
+    setActiveMenuId(null);
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setNewMessage("");
+  };
 
   // Fetch user list and their last messages
   useEffect(() => {
@@ -229,7 +278,7 @@ export function ChatPage() {
     return () => unsubscribe();
   }, [selectedUser, user]); // Runs when `selectedUser` or `user` changes
 
-  // Send Message
+  // Send Message (or save edit)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user || !selectedUser) return;
@@ -238,6 +287,22 @@ export function ChatPage() {
       user.uid < selectedUser.id
         ? `${user.uid}_${selectedUser.id}`
         : `${selectedUser.id}_${user.uid}`;
+
+    // If editing, update existing message
+    if (editingMessageId) {
+      try {
+        await updateDoc(doc(db, "chats", chatId, "messages", editingMessageId), {
+          text: newMessage.trim(),
+          edited: true,
+        });
+      } catch (error) {
+        console.error("Error editing message:", error);
+      }
+      setEditingMessageId(null);
+      setNewMessage("");
+      setIsTyping(false);
+      return;
+    }
 
     const messagesRef = collection(db, "chats", chatId, "messages");
 
@@ -491,33 +556,73 @@ export function ChatPage() {
                   {messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`flex items-end gap-2 ${
+                      className={`flex ${
                         message.senderId === user?.uid ? "justify-end" : "justify-start"
                       }`}
                     >
-                      {message.senderId !== user?.uid && (
-                        <Avatar className="w-8 h-8 flex-shrink-0">
-                          <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name || 'User'} />
-                          <AvatarFallback className="bg-gray-400 text-white text-xs">
-                            {selectedUser.name?.[0] || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div className="flex flex-col max-w-xs md:max-w-md">
+                      <div className="max-w-md md:max-w-xl relative group">
+                        {/* Hover dropdown icon */}
+                        {message.senderId === user?.uid && !editingMessageId && (
+                          <div className="absolute -left-8 top-1 opacity-0 group-hover:opacity-100 transition-opacity z-10" ref={activeMenuId === message.id ? menuRef : null}>
+                            <button
+                              onClick={() => setActiveMenuId(activeMenuId === message.id ? null : message.id)}
+                              className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                            >
+                              <ChevronDown className="w-4 h-4 text-gray-500" />
+                            </button>
+                            {/* Dropdown menu */}
+                            {activeMenuId === message.id && (
+                              <div className="absolute left-0 top-7 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[120px] z-20">
+                                {message.text && (
+                                  <button
+                                    onClick={() => handleStartEdit(message)}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                    Edit
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteMessage(message.id)}
+                                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Message bubble */}
                         <div
-                          className={`px-4 py-2 rounded-2xl ${
+                          className={`px-3 py-1.5 ${
                             message.senderId === user?.uid
-                              ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
-                              : "bg-white text-gray-800 shadow-sm"
+                              ? "bg-blue-500 text-white rounded-2xl rounded-tr-sm"
+                              : "bg-white text-gray-800 shadow-sm rounded-2xl rounded-tl-sm"
                           }`}
                         >
-                          {message.text && <p className="break-words">{message.text}</p>}
+                          {message.text && (
+                            <span className="break-words text-[15px]">
+                              {message.text}
+                              {message.edited && (
+                                <span className={`text-[10px] italic ml-1 ${
+                                  message.senderId === user?.uid ? "text-blue-200" : "text-gray-400"
+                                }`}>edited</span>
+                              )}
+                              <span className={`inline-block align-bottom ml-2 text-[10px] leading-none translate-y-0.5 ${
+                                message.senderId === user?.uid ? "text-blue-100" : "text-gray-400"
+                              }`}>
+                                {message.timestamp?.toDate?.()?.toLocaleTimeString?.([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </span>
+                          )}
                           {message.fileURL && (
                             <a
                               href={message.fileURL}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`inline-flex items-center gap-2 mt-1 ${
+                              className={`inline-flex items-center gap-2 mt-1 text-sm ${
                                 message.senderId === user?.uid ? "text-blue-100" : "text-blue-600"
                               } hover:underline`}
                             >
@@ -525,38 +630,17 @@ export function ChatPage() {
                               {message.fileName}
                             </a>
                           )}
+                          {!message.text && (
+                            <span className={`text-[10px] float-right mt-1 ${
+                              message.senderId === user?.uid ? "text-blue-100" : "text-gray-400"
+                            }`}>
+                              {message.timestamp?.toDate?.()?.toLocaleTimeString?.([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
                         </div>
-                        <p className={`text-xs mt-1 px-1 ${
-                          message.senderId === user?.uid ? "text-right text-gray-600" : "text-gray-500"
-                        }`}>
-                          {message.timestamp?.toDate?.()?.toLocaleTimeString?.()}
-                        </p>
                       </div>
-                      {message.senderId === user?.uid && (
-                        <Avatar className="w-8 h-8 flex-shrink-0">
-                          <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'You'} />
-                          <AvatarFallback className="bg-blue-400 text-white text-xs">
-                            {user?.displayName?.[0] || user?.email?.[0] || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
                     </div>
                   ))}
-                  {isTyping && (
-                    <div className="flex items-end gap-2">
-                      <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name || 'User'} />
-                        <AvatarFallback className="bg-gray-400 text-white text-xs">
-                          {selectedUser.name?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex items-center gap-1 bg-white text-gray-800 px-4 py-2 rounded-2xl shadow-sm">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
-                      </div>
-                    </div>
-                  )}
                   <div ref={messagesEndRef} />
                 </>
               ) : (
@@ -578,6 +662,18 @@ export function ChatPage() {
           {/* Message Input */}
           {selectedUser && (
             <div className="bg-white border-t border-gray-200 p-4">
+              {/* Editing indicator */}
+              {editingMessageId && (
+                <div className="flex items-center justify-between mb-2 px-2 py-1.5 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                  <div className="flex items-center gap-2">
+                    <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-sm text-blue-700">Editing message</span>
+                  </div>
+                  <button onClick={handleCancelEdit} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               <form onSubmit={handleSendMessage} className="flex items-center gap-3">
                 <input
                   type="file"
