@@ -65,8 +65,8 @@ export function AboutPage() {
                 alt="Pragati Chavan"
                 className="w-32 h-32 rounded-full mx-auto mb-4"
               />
-              <h3 className="font-bold">Aditya BInjagermath</h3>
-              <p className="text-gray-600">Content Support & Desigining</p>
+              <h3 className="font-bold">Pragati Chavan</h3>
+              <p className="text-gray-600">Full Stack Developer</p>
             </div>
           </div>
         </section>
