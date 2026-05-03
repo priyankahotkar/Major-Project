@@ -1,5 +1,9 @@
 {
     "rewrites": [
+      {
+      "source": "/api/leetcode/:path*",
+      "destination": "https://leetcode-api-pied.vercel.app/:path*"
+    },
       { "source": "/(.*)", "destination": "/index.html" }
     ]
   }
