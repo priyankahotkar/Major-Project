@@ -4,28 +4,49 @@ import cors from "cors";
 import notionRoutes from "./routes/notion.js";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
+// Use Render's PORT
+const PORT = process.env.PORT || 5000;
+
+// Allow both local + deployed frontend
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  process.env.FRONTEND_URL
+];
+
+// CORS setup
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman, mobile apps)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    optionsSuccessStatus: 200,
   })
 );
 
+// Handle preflight requests
 app.options("*", cors());
+
+// Middleware
 app.use(express.json());
 
+// Routes
 app.use("/api/notion", notionRoutes);
 
+// Health check route (for Render)
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`MentorConnect backend running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
