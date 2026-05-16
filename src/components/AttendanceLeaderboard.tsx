@@ -102,7 +102,9 @@ const parseUserRecord = (id: string, raw: Record<string, unknown>): UserRecord =
 };
 
 const isAttendedRoom = (room: VideoRoomRecord): boolean => {
-  return room.attended === true || room.status === "attended";
+  const isAttended = room.attended === true || room.status === "attended";
+  // console.log(`[LEADERBOARD] Room ${room.id} attended:`, isAttended, { attended: room.attended, status: room.status });
+  return isAttended;
 };
 
 const incrementCount = (counterMap: Map<string, number>, userId: string) => {
@@ -258,6 +260,11 @@ export function AttendanceLeaderboard() {
   }, []);
 
   const { menteeLeaderboard, mentorLeaderboard } = useMemo(() => {
+    console.log("[LEADERBOARD] Starting calculation...");
+    console.log("[LEADERBOARD] Total bookings:", bookings.length);
+    console.log("[LEADERBOARD] Total videoRooms:", videoRooms.length);
+    console.log("[LEADERBOARD] Total users:", users.length);
+
     const menteeTotalSessions = new Map<string, number>();
     const mentorTotalSessions = new Map<string, number>();
     const menteeAttendedSessions = new Map<string, number>();
@@ -283,10 +290,25 @@ export function AttendanceLeaderboard() {
       }
     });
 
+    console.log("[LEADERBOARD] Mentee total sessions:", Object.fromEntries(menteeTotalSessions));
+    console.log("[LEADERBOARD] Mentor total sessions:", Object.fromEntries(mentorTotalSessions));
+
     videoRooms.forEach((room) => {
-      if (!isAttendedRoom(room)) {
+      const isAttended = isAttendedRoom(room);
+      console.log(`[LEADERBOARD] Processing room ${room.id}: attended=${isAttended}`);
+      
+      if (!isAttended) {
+        console.log(`[LEADERBOARD] Skipping room ${room.id} - not attended`);
         return;
       }
+
+      console.log(`[LEADERBOARD] Room data:`, { 
+        mentorId: room.mentorId, 
+        menteeId: room.menteeId,
+        menteeIds: room.menteeIds,
+        participantIds: room.participantIds,
+        status: room.status
+      });
 
       let mentorId = room.mentorId;
       if (!mentorId && room.bookingId) {
@@ -295,21 +317,25 @@ export function AttendanceLeaderboard() {
 
       if (mentorId) {
         incrementCount(mentorAttendedSessions, mentorId);
+        console.log(`[LEADERBOARD] Incremented mentor ${mentorId} attended count`);
       }
 
       const menteeIds = new Set<string>();
 
       if (room.menteeId) {
         menteeIds.add(room.menteeId);
+        console.log(`[LEADERBOARD] Added menteeId: ${room.menteeId}`);
       }
 
       room.menteeIds.forEach((menteeId) => {
         menteeIds.add(menteeId);
+        console.log(`[LEADERBOARD] Added menteeId from array: ${menteeId}`);
       });
 
       room.participantIds.forEach((participantId) => {
         if (!mentorId || participantId !== mentorId) {
           menteeIds.add(participantId);
+          console.log(`[LEADERBOARD] Added participantId as mentee: ${participantId}`);
         }
       });
 
@@ -317,21 +343,29 @@ export function AttendanceLeaderboard() {
         const booking = bookingLookup.get(room.bookingId);
         if (booking?.menteeId) {
           menteeIds.add(booking.menteeId);
+          console.log(`[LEADERBOARD] Added menteeId from booking: ${booking.menteeId}`);
         }
       }
 
       // Fallback for room ids that follow "mentorId-menteeId" format.
       if (menteeIds.size === 0 && mentorId) {
         const idParts = room.id.split("-");
+        console.log(`[LEADERBOARD] Trying fallback parsing. Room ID parts:`, idParts, `Expected mentorId: ${mentorId}`);
         if (idParts.length === 2 && idParts[0] === mentorId && idParts[1] !== mentorId) {
           menteeIds.add(idParts[1]);
+          console.log(`[LEADERBOARD] Added menteeId from fallback: ${idParts[1]}`);
         }
       }
+
+      console.log(`[LEADERBOARD] Final menteeIds for room ${room.id}:`, Array.from(menteeIds));
 
       menteeIds.forEach((menteeId) => {
         incrementCount(menteeAttendedSessions, menteeId);
       });
     });
+
+    console.log("[LEADERBOARD] Final mentee attended sessions:", Object.fromEntries(menteeAttendedSessions));
+    console.log("[LEADERBOARD] Final mentor attended sessions:", Object.fromEntries(mentorAttendedSessions));
 
     const usersMap = new Map(users.map((user) => [user.id, user]));
 
@@ -351,6 +385,8 @@ export function AttendanceLeaderboard() {
             user?.details?.fullName ||
             fallbackNames.get(userId) ||
             "Unknown User";
+
+          console.log(`[LEADERBOARD] Mentee ${name}: ${attendedSessions}/${totalSessions} = ${attendanceRate}%`);
 
           return {
             userId,
